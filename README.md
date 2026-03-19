@@ -1,6 +1,6 @@
-# kiyas (كياس) — AI-Powered Design Fidelity CLI
+# kiyas — AI-Powered Design Fidelity CLI
 
-> **kiyas** (كياس) — "comparison" in Arabic, Turkish, and Urdu. Pronounced "key-AHS."
+> **kiyas** — "comparison". Pronounced "key-AHS."
 
 A developer-first CLI tool that compares Figma designs against rendered UI components and generates an AI-powered semantic diff report.
 
@@ -24,7 +24,7 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
                           └──────────┬───────────┘
                                      │
                       ┌──────────────┼──────────────┐
-                      ▼              ▼               ▼
+                      ▼              ▼               ▼How
               ┌──────────────┐ ┌───────────┐ ┌─────────────┐
               │ 1. Auth      │ │ 2. Figma  │ │ 3. Resolve  │
               │              │ │  Capture  │ │  Component  │
