@@ -4,7 +4,7 @@
 
 A developer-first CLI tool that compares Figma designs against rendered UI components and generates an AI-powered semantic diff report.
 
-Unlike pixel-diff tools, kiyas uses vision AI to understand *what* is different and *why* it matters — outputting actionable, human-readable feedback like:
+Unlike pixel-diff tools, kiyas uses vision AI to understand _what_ is different and _why_ it matters — outputting actionable, human-readable feedback like:
 
 - "border-radius is 8px in implementation but 12px in design"
 - "spacing between title and subtitle is 16px tighter than the design"
@@ -140,21 +140,21 @@ kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
 
 ## CLI Reference
 
-| Flag | Description | Required |
-|------|-------------|----------|
-| `--figma <url>` | Figma frame/component URL | Yes |
-| `--component <description>` | Natural-language description of the component to find | Yes* |
-| `--target <url>` | Direct URL of the rendered component (skips AI lookup) | Yes* |
-| `--dev-server <url>` | Dev server base URL (default: `http://localhost:3000`) | No |
-| `--model <provider>` | AI provider: `claude` (default) or `openai` | No |
-| `--output <path>` | Path to save the markdown report | No |
-| `--viewport <size>` | Viewport size for screenshot (default: `1280x720`) | No |
-| `--selector <css>` | CSS selector to screenshot a specific element | No |
-| `--wait <ms>` | Time in ms to wait before screenshot (for animations/loading) | No |
-| `--config <path>` | Path to a JSON config file for batch comparisons | No |
-| `--threshold <level>` | Severity filter: `all`, `medium`, `high` (default: `all`) | No |
+| Flag                        | Description                                                   | Required |
+| --------------------------- | ------------------------------------------------------------- | -------- |
+| `--figma <url>`             | Figma frame/component URL                                     | Yes      |
+| `--component <description>` | Natural-language description of the component to find         | Yes\*    |
+| `--target <url>`            | Direct URL of the rendered component (skips AI lookup)        | Yes\*    |
+| `--dev-server <url>`        | Dev server base URL (default: `http://localhost:3000`)        | No       |
+| `--model <provider>`        | AI provider: `claude` (default) or `openai`                   | No       |
+| `--output <path>`           | Path to save the markdown report                              | No       |
+| `--viewport <size>`         | Viewport size for screenshot (default: `1280x720`)            | No       |
+| `--selector <css>`          | CSS selector to screenshot a specific element                 | No       |
+| `--wait <ms>`               | Time in ms to wait before screenshot (for animations/loading) | No       |
+| `--config <path>`           | Path to a JSON config file for batch comparisons              | No       |
+| `--threshold <level>`       | Severity filter: `all`, `medium`, `high` (default: `all`)     | No       |
 
-*\*Provide either `--component` or `--target`. When using `--component`, kiyas uses AI to find the component in your codebase and resolve it to a URL.*
+_\*Provide either `--component` or `--target`. When using `--component`, kiyas uses AI to find the component in your codebase and resolve it to a URL._
 
 ---
 
@@ -168,13 +168,13 @@ kiyas leverages your existing AI subscriptions — no separate API keys needed.
 
 **Auth resolution order:**
 
-| Provider | Priority |
-|----------|----------|
-| Claude | 1. macOS Keychain (`Claude Code-credentials`) |
-| | 2. `CLAUDE_CODE_OAUTH_TOKEN` env var |
-| | 3. `~/.claude/.credentials.json` (Linux/Windows) |
-| OpenAI | 1. macOS Keychain (`codex-credentials`) |
-| | 2. `~/.codex/auth.json` |
+| Provider | Priority                                         |
+| -------- | ------------------------------------------------ |
+| Claude   | 1. macOS Keychain (`Claude Code-credentials`)    |
+|          | 2. `CLAUDE_CODE_OAUTH_TOKEN` env var             |
+|          | 3. `~/.claude/.credentials.json` (Linux/Windows) |
+| OpenAI   | 1. macOS Keychain (`codex-credentials`)          |
+|          | 2. `~/.codex/auth.json`                          |
 
 If no session is found, kiyas prompts you to sign in:
 
@@ -245,22 +245,22 @@ Found **4 discrepancies** (1 high, 2 medium, 1 low)
 
 ### HIGH
 
-| Element | Property | Expected (Design) | Actual (Implementation) |
-|---------|----------|--------------------|------------------------|
-| Button | border-radius | 12px | 8px |
+| Element | Property      | Expected (Design) | Actual (Implementation) |
+| ------- | ------------- | ----------------- | ----------------------- |
+| Button  | border-radius | 12px              | 8px                     |
 
 ### MEDIUM
 
-| Element | Property | Expected (Design) | Actual (Implementation) |
-|---------|----------|--------------------|------------------------|
-| Button label | font-weight | 600 (semibold) | 400 (regular) |
-| Button | padding | 12px 24px | 8px 16px |
+| Element      | Property    | Expected (Design) | Actual (Implementation) |
+| ------------ | ----------- | ----------------- | ----------------------- |
+| Button label | font-weight | 600 (semibold)    | 400 (regular)           |
+| Button       | padding     | 12px 24px         | 8px 16px                |
 
 ### LOW
 
-| Element | Property | Expected (Design) | Actual (Implementation) |
-|---------|----------|--------------------|------------------------|
-| Button | box-shadow | subtle drop shadow | none |
+| Element | Property   | Expected (Design)  | Actual (Implementation) |
+| ------- | ---------- | ------------------ | ----------------------- |
+| Button  | box-shadow | subtle drop shadow | none                    |
 ```
 
 ---
@@ -302,16 +302,16 @@ kiyas/
 
 ## Tech Stack
 
-| Layer | Tool |
-|-------|------|
-| Runtime | Node.js (TypeScript) |
-| Screenshot capture | Playwright (headless Chromium) |
-| Figma export | Figma REST API |
-| AI comparison | Claude Vision API or OpenAI Vision API |
-| Component resolution | Claude / OpenAI (codebase agent) |
-| Output | Markdown (terminal + file) |
-| Build | tsup |
-| Package manager | npm |
+| Layer                | Tool                                   |
+| -------------------- | -------------------------------------- |
+| Runtime              | Node.js (TypeScript)                   |
+| Screenshot capture   | Playwright (headless Chromium)         |
+| Figma export         | Figma REST API                         |
+| AI comparison        | Claude Vision API or OpenAI Vision API |
+| Component resolution | Claude / OpenAI (codebase agent)       |
+| Output               | Markdown (terminal + file)             |
+| Build                | tsup                                   |
+| Package manager      | npm                                    |
 
 ---
 
