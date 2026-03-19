@@ -1,5 +1,5 @@
 {
-  "name": "kiyas",
+  "name": "kiyas-cli",
   "version": "0.1.0",
   "description": "AI-powered design fidelity CLI — compare Figma designs against rendered UI",
   "type": "module",
@@ -20,6 +20,10 @@
     "vision"
   ],
   "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "dependencies": {
     "chalk": "^5.4.1",
     "commander": "^12.1.0",

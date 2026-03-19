@@ -92,15 +92,19 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
 ### Install
 
 ```bash
-git clone <repo-url> && cd kiyas
-npm install
+npm install -g kiyas-cli
 npx playwright install chromium
-npm run build
+```
+
+Or run without installing:
+
+```bash
+npx kiyas-cli --figma <url> --component "..."
 ```
 
 ### Configure
 
-Create a `.env` file in the project root:
+Create a `.env` file in your project root:
 
 ```bash
 cp .env.example .env

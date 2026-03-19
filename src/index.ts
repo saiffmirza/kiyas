@@ -11,8 +11,10 @@ import { capturePlaywright } from "./capture/playwright.js";
 import { compareImages, type Discrepancy } from "./compare/index.js";
 import { resolveComponent } from "./resolve/component.js";
 import { generateMarkdownReport } from "./report/markdown.js";
+import { loadSettings, saveSetting, getAllSettings } from "./settings.js";
 import { log } from "./utils/logger.js";
 
+const settings = loadSettings();
 const program = new Command();
 
 program
@@ -20,7 +22,52 @@ program
   .description(
     "AI-powered design fidelity CLI — compare Figma designs against rendered UI"
   )
-  .version("0.1.0")
+  .version("0.1.0");
+
+// --- subcommands ---
+program
+  .command("set <key> <value>")
+  .description("Set a default (e.g. kiyas set model openai)")
+  .action((key: string, value: string) => {
+    try {
+      saveSetting(key, value);
+      log.success(`${key} = ${value}`);
+    } catch (err: unknown) {
+      log.error(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  });
+
+program
+  .command("get <key>")
+  .description("Get a setting value")
+  .action((key: string) => {
+    const all = getAllSettings() as Record<string, string | undefined>;
+    const value = all[key];
+    if (value !== undefined) {
+      console.log(value);
+    } else {
+      log.dim(`${key} is not set`);
+    }
+  });
+
+program
+  .command("settings")
+  .description("Show all settings")
+  .action(() => {
+    const all = getAllSettings();
+    const entries = Object.entries(all);
+    if (entries.length === 0) {
+      log.dim("No settings configured. Defaults will be used.");
+      return;
+    }
+    for (const [key, value] of entries) {
+      console.log(`${chalk.bold(key)} = ${value}`);
+    }
+  });
+
+// --- main compare command (default) ---
+program
   .option("--figma <url>", "Figma frame/component URL")
   .option(
     "--component <description>",
@@ -32,16 +79,20 @@ program
   )
   .option(
     "--dev-server <url>",
-    "Dev server base URL (default: http://localhost:3000)",
-    process.env.DEV_SERVER_URL ?? "http://localhost:3000"
+    "Dev server base URL",
+    settings.devServer ?? process.env.DEV_SERVER_URL ?? "http://localhost:3000"
   )
-  .option("--model <provider>", "AI provider: claude (default) or openai", "claude")
+  .option(
+    "--model <provider>",
+    "AI provider: claude or openai",
+    settings.model ?? "claude"
+  )
   .option("--output <path>", "Path to save the markdown report")
-  .option("--viewport <size>", "Viewport size for screenshot", "1280x720")
+  .option("--viewport <size>", "Viewport size for screenshot", settings.viewport ?? "1280x720")
   .option("--selector <css>", "CSS selector to screenshot a specific element")
   .option("--wait <ms>", "Time in ms to wait before screenshot", parseInt)
   .option("--config <path>", "Path to a JSON config file for batch comparisons")
-  .option("--threshold <level>", "Severity threshold: all, medium, high", "all")
+  .option("--threshold <level>", "Severity threshold: all, medium, high", settings.threshold ?? "all")
   .action(async (opts) => {
     try {
       await run(opts);
