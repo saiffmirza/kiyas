@@ -1,0 +1,5 @@
+{
+  "figmaAccessToken": "env:FIGMA_ACCESS_TOKEN",
+  "model": "claude",
+  "viewport": "1280x720"
+}
