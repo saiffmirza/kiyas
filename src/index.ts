@@ -5,7 +5,7 @@ import ora from "ora";
 import { writeFile, copyFile, unlink } from "node:fs/promises";
 import { dirname, join, basename, resolve } from "node:path";
 import { resolveAuth } from "./auth/index.js";
-import { resolveFigmaToken, loadConfigFile } from "./config.js";
+import { ensureFigmaToken, loadConfigFile } from "./config.js";
 import { captureFigma } from "./capture/figma.js";
 import { capturePlaywright } from "./capture/playwright.js";
 import { compareImages, type Discrepancy } from "./compare/index.js";
@@ -13,6 +13,7 @@ import { resolveComponent } from "./resolve/component.js";
 import { generateHtmlReport } from "./report/html.js";
 import { loadSettings, saveSetting, getAllSettings } from "./settings.js";
 import { log } from "./utils/logger.js";
+import { runSetup } from "./setup.js";
 
 const settings = loadSettings();
 const program = new Command();
@@ -63,6 +64,19 @@ program
     }
     for (const [key, value] of entries) {
       console.log(`${chalk.bold(key)} = ${value}`);
+    }
+  });
+
+program
+  .command("setup")
+  .description("Interactive first-time setup (Figma token + AI provider)")
+  .action(async () => {
+    try {
+      await runSetup();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      log.error(message);
+      process.exit(1);
     }
   });
 
@@ -152,12 +166,7 @@ async function run(opts: CLIOptions) {
     );
   }
 
-  const figmaToken = resolveFigmaToken();
-  if (!figmaToken) {
-    throw new Error(
-      "Figma access token not found. Set FIGMA_ACCESS_TOKEN in your .env file."
-    );
-  }
+  const figmaToken = await ensureFigmaToken();
 
   const auth = await resolveAuth(opts.model);
 
@@ -211,12 +220,7 @@ async function run(opts: CLIOptions) {
 async function runBatchMode(opts: CLIOptions) {
   const config = await loadConfigFile(opts.config!);
   const model = (config.model ?? opts.model) as "claude" | "openai";
-  const figmaToken = config.figmaAccessToken ?? resolveFigmaToken();
-  if (!figmaToken) {
-    throw new Error(
-      "Figma access token not found. Set FIGMA_ACCESS_TOKEN in your .env file."
-    );
-  }
+  const figmaToken = config.figmaAccessToken ?? await ensureFigmaToken();
 
   const auth = await resolveAuth(model);
 

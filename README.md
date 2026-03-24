@@ -103,26 +103,15 @@ npm install -g kiyas-cli
 npx playwright install chromium
 ```
 
-Or run without installing:
+### Setup
 
 ```bash
-npx kiyas-cli --figma <url> --component "..."
+kiyas setup
 ```
 
-### Configure
-
-Create a `.env` file in your project root:
-
-```bash
-cp .env.example .env
-```
-
-Then add your Figma token:
-
-```
-FIGMA_ACCESS_TOKEN=your-figma-token-here
-DEV_SERVER_URL=http://localhost:3000
-```
+This walks you through:
+1. **Figma token** — creates a read-only personal access token and saves it to `.env`
+2. **AI provider** — checks for Claude Code or Codex and sets the default
 
 ### Run
 
@@ -213,7 +202,7 @@ To fix this, either:
      (requires signing into Codex: codex auth login)
 ```
 
-**Figma:** Requires a personal access token. Set it in `.env` as `FIGMA_ACCESS_TOKEN` or in a `.kiyasrc` file.
+**Figma:** Requires a personal access token with **File content → Read only** scope. Run `kiyas setup` to configure it, or set `FIGMA_ACCESS_TOKEN` in `.env` manually.
 
 ---
 
