@@ -22,6 +22,7 @@
   "license": "MIT",
   "files": [
     "dist",
+    "assets",
     "README.md"
   ],
   "dependencies": {

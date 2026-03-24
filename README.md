@@ -1,6 +1,13 @@
-# kiyas — AI-Powered Design Fidelity CLI
+<p align="center">
+  <img src="assets/logo.png" alt="kiyas" width="400">
+</p>
 
-> **kiyas** — "comparison". Pronounced "key-AHS."
+<p align="center">
+  <strong>AI-Powered Design Fidelity CLI</strong><br>
+  <em>"comparison" — pronounced "key-AHS"</em>
+</p>
+
+---
 
 A developer-first CLI tool that compares Figma designs against rendered UI components and generates an AI-powered semantic diff report.
 
