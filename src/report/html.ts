@@ -3,16 +3,16 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Discrepancy } from "../compare/index.js";
 
-// Logo embedded as base64 (resized to 300px wide)
+// Logo embedded as base64
 let _logoCache: string | undefined;
 async function getLogoBase64(): Promise<string> {
   if (_logoCache) return _logoCache;
   try {
     // Try to load from assets directory relative to the package
     const paths = [
-      resolve(dirname(fileURLToPath(import.meta.url)), "..", "assets", "logo-small.png"),
-      resolve(dirname(fileURLToPath(import.meta.url)), "assets", "logo-small.png"),
-      resolve(process.cwd(), "assets", "logo-small.png"),
+      resolve(dirname(fileURLToPath(import.meta.url)), "..", "assets", "logo.png"),
+      resolve(dirname(fileURLToPath(import.meta.url)), "assets", "logo.png"),
+      resolve(process.cwd(), "assets", "logo.png"),
     ];
     for (const p of paths) {
       try {
@@ -82,20 +82,43 @@ export async function generateHtmlReport(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>kiyas Report: ${esc(title)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    :root {
+      --cream: #f6f0e6;
+      --cream-light: #f5f1ea;
+      --cream-dark: #e5ddd0;
+      --navy: #1b1b3a;
+      --navy-light: #2d2d52;
+      --gold: #b8963e;
+      --gold-light: #d4b667;
+      --gold-muted: rgba(184, 150, 62, 0.15);
+      --text: #2c2c3e;
+      --text-secondary: #6b6b82;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --card-border: rgba(27, 27, 58, 0.08);
+      --card-shadow: 0 1px 3px rgba(27, 27, 58, 0.04), 0 4px 12px rgba(27, 27, 58, 0.03);
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f8f9fa;
-      color: #1a1a2e;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--cream);
+      color: var(--text);
       line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .page-accent {
+      height: 4px;
+      background: linear-gradient(90deg, var(--navy) 0%, var(--gold) 50%, var(--navy) 100%);
     }
 
     .container {
-      max-width: 960px;
+      max-width: 980px;
       margin: 0 auto;
-      padding: 40px 24px;
+      padding: 48px 32px 64px;
     }
 
     /* Header */
@@ -103,19 +126,26 @@ export async function generateHtmlReport(
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 32px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 40px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--cream-dark);
     }
 
-    .header h1 {
-      font-size: 24px;
+    .header-left h1 {
+      font-size: 26px;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--navy);
+      letter-spacing: -0.3px;
+    }
+
+    .header-left .subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
     }
 
     .header .logo img {
-      height: 56px;
+      height: 120px;
       width: auto;
     }
 
@@ -123,12 +153,14 @@ export async function generateHtmlReport(
     .meta {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
-      margin-bottom: 32px;
-      padding: 20px;
-      background: #fff;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
+      gap: 16px;
+      margin-bottom: 36px;
+      padding: 22px 24px;
+      background: var(--card-bg);
+      backdrop-filter: blur(8px);
+      border-radius: 14px;
+      border: 1px solid var(--card-border);
+      box-shadow: var(--card-shadow);
     }
 
     .meta-item {
@@ -137,37 +169,39 @@ export async function generateHtmlReport(
 
     .meta-item .label {
       font-weight: 600;
-      color: #64748b;
+      color: var(--gold);
       text-transform: uppercase;
-      font-size: 11px;
-      letter-spacing: 0.5px;
-      margin-bottom: 2px;
+      font-size: 10px;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
     }
 
     .meta-item .value {
-      color: #334155;
+      color: var(--text);
       word-break: break-all;
     }
 
     .meta-item .value a {
-      color: #3b82f6;
+      color: var(--navy);
       text-decoration: none;
+      border-bottom: 1px solid var(--cream-dark);
+      transition: border-color 0.2s;
     }
 
     .meta-item .value a:hover {
-      text-decoration: underline;
+      border-color: var(--gold);
     }
 
     /* Visual Comparison */
     .comparison {
-      margin-bottom: 32px;
+      margin-bottom: 36px;
     }
 
     .comparison h2 {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 600;
       margin-bottom: 16px;
-      color: #0f172a;
+      color: var(--navy);
     }
 
     .comparison-grid {
@@ -177,20 +211,28 @@ export async function generateHtmlReport(
     }
 
     .comparison-card {
-      background: #fff;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
+      background: var(--card-bg);
+      backdrop-filter: blur(8px);
+      border-radius: 14px;
+      border: 1px solid var(--card-border);
+      box-shadow: var(--card-shadow);
       overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+
+    .comparison-card:hover {
+      box-shadow: 0 2px 6px rgba(27, 27, 58, 0.06), 0 8px 24px rgba(27, 27, 58, 0.05);
     }
 
     .comparison-card .card-label {
-      padding: 12px 16px;
-      font-size: 12px;
+      padding: 12px 18px;
+      font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #64748b;
-      border-bottom: 1px solid #e2e8f0;
+      letter-spacing: 1px;
+      color: var(--gold);
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.4);
     }
 
     .comparison-card img {
@@ -199,7 +241,7 @@ export async function generateHtmlReport(
       display: block;
       padding: 16px;
       object-fit: contain;
-      background: #fafafa;
+      background: var(--cream-light);
     }
 
     /* Summary */
@@ -213,71 +255,96 @@ export async function generateHtmlReport(
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 16px;
-      border-radius: 10px;
-      font-size: 14px;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 13px;
       font-weight: 600;
+      backdrop-filter: blur(8px);
+      transition: transform 0.15s;
+    }
+
+    .summary-badge:hover {
+      transform: translateY(-1px);
     }
 
     .summary-badge .count {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 700;
     }
 
-    .summary-badge.high { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-    .summary-badge.medium { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-    .summary-badge.low { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-    .summary-badge.total { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
+    .summary-badge.high {
+      background: rgba(185, 28, 28, 0.08);
+      color: #991b1b;
+      border: 1px solid rgba(185, 28, 28, 0.15);
+    }
+    .summary-badge.medium {
+      background: rgba(180, 130, 20, 0.08);
+      color: #92400e;
+      border: 1px solid rgba(180, 130, 20, 0.15);
+    }
+    .summary-badge.low {
+      background: rgba(22, 101, 52, 0.08);
+      color: #166534;
+      border: 1px solid rgba(22, 101, 52, 0.15);
+    }
+    .summary-badge.total {
+      background: rgba(27, 27, 58, 0.06);
+      color: var(--navy);
+      border: 1px solid rgba(27, 27, 58, 0.1);
+    }
 
     /* Discrepancies */
     .section-title {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
-      margin: 24px 0 12px;
-      color: #0f172a;
+      margin: 28px 0 12px;
+      color: var(--navy);
     }
 
     .severity-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       display: inline-block;
     }
 
-    .severity-dot.high { background: #ef4444; }
-    .severity-dot.medium { background: #f59e0b; }
-    .severity-dot.low { background: #22c55e; }
+    .severity-dot.high { background: #dc2626; }
+    .severity-dot.medium { background: #d97706; }
+    .severity-dot.low { background: #16a34a; }
 
     table {
       width: 100%;
-      border-collapse: collapse;
-      background: #fff;
-      border-radius: 12px;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--card-bg);
+      backdrop-filter: blur(8px);
+      border-radius: 14px;
       overflow: hidden;
-      border: 1px solid #e2e8f0;
+      border: 1px solid var(--card-border);
+      box-shadow: var(--card-shadow);
       margin-bottom: 16px;
       font-size: 13px;
     }
 
     th {
-      background: #f8fafc;
-      padding: 10px 14px;
+      background: rgba(27, 27, 58, 0.03);
+      padding: 12px 16px;
       text-align: left;
       font-weight: 600;
-      color: #475569;
-      font-size: 11px;
+      color: var(--text-secondary);
+      font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 1px solid #e2e8f0;
+      letter-spacing: 1px;
+      border-bottom: 1px solid var(--card-border);
     }
 
     td {
-      padding: 12px 14px;
-      border-bottom: 1px solid #f1f5f9;
-      color: #334155;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(27, 27, 58, 0.04);
+      color: var(--text);
       vertical-align: top;
     }
 
@@ -286,70 +353,87 @@ export async function generateHtmlReport(
     }
 
     tr:hover td {
-      background: #f8fafc;
+      background: rgba(184, 150, 62, 0.04);
     }
 
     /* Match */
     .match {
       text-align: center;
-      padding: 48px 24px;
-      background: #f0fdf4;
-      border-radius: 12px;
-      border: 1px solid #bbf7d0;
+      padding: 56px 24px;
+      background: rgba(22, 101, 52, 0.06);
+      border-radius: 14px;
+      border: 1px solid rgba(22, 101, 52, 0.12);
     }
 
     .match h2 {
       font-size: 20px;
       color: #166534;
+      font-weight: 600;
     }
 
     /* Footer */
     .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e2e8f0;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--cream-dark);
       text-align: center;
       font-size: 12px;
-      color: #94a3b8;
+      color: var(--text-secondary);
+      letter-spacing: 0.2px;
+    }
+
+    .footer span {
+      color: var(--gold);
     }
 
     /* Filter */
     .filters {
       display: flex;
       gap: 8px;
-      margin-bottom: 24px;
+      margin-bottom: 28px;
     }
 
     .filter-btn {
-      padding: 6px 14px;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-      background: #fff;
+      padding: 7px 16px;
+      border-radius: 9px;
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      backdrop-filter: blur(8px);
       cursor: pointer;
-      font-size: 13px;
+      font-family: inherit;
+      font-size: 12px;
       font-weight: 500;
-      color: #475569;
-      transition: all 0.15s;
+      color: var(--text-secondary);
+      transition: all 0.2s;
     }
 
-    .filter-btn:hover { background: #f1f5f9; }
-    .filter-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .filter-btn:hover {
+      background: rgba(27, 27, 58, 0.04);
+      color: var(--navy);
+    }
+
+    .filter-btn.active {
+      background: var(--navy);
+      color: var(--cream-light);
+      border-color: var(--navy);
+      box-shadow: 0 2px 8px rgba(27, 27, 58, 0.2);
+    }
   </style>
 </head>
 <body>
+  <div class="page-accent"></div>
   <div class="container">
     <div class="header">
-      <h1>${esc(title)}</h1>
+      <div class="header-left">
+        <h1>${esc(title)}</h1>
+        <div class="subtitle">Design Fidelity Report &middot; ${date}</div>
+      </div>
       <div class="logo">${logoSrc ? `<img src="${logoSrc}" alt="kiyas">` : "kiyas"}</div>
     </div>
 
     <div class="meta">
       <div class="meta-item">
-        <div class="label">Date</div>
-        <div class="value">${date}</div>
-      </div>
-      <div class="meta-item">
-        <div class="label">Figma</div>
+        <div class="label">Figma Source</div>
         <div class="value"><a href="${esc(figmaUrl)}" target="_blank">${esc(figmaUrl.length > 60 ? figmaUrl.slice(0, 57) + "..." : figmaUrl)}</a></div>
       </div>
       <div class="meta-item">
@@ -357,7 +441,7 @@ export async function generateHtmlReport(
         <div class="value"><a href="${esc(targetUrl)}" target="_blank">${esc(targetUrl)}</a></div>
       </div>
       <div class="meta-item">
-        <div class="label">Model</div>
+        <div class="label">AI Model</div>
         <div class="value">${esc(model)}</div>
       </div>
     </div>
@@ -407,7 +491,7 @@ export async function generateHtmlReport(
     }
 
     <div class="footer">
-      Generated by kiyas — AI-powered design fidelity CLI
+      Generated by <span>kiyas</span> — AI-powered design fidelity CLI
     </div>
   </div>
 
