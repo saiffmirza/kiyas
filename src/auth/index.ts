@@ -11,14 +11,15 @@ export async function resolveAuth(
   preferredModel: "claude" | "openai"
 ): Promise<AuthResult> {
   if (preferredModel === "claude") {
-    const token = await resolveClaudeAuth();
-    if (token) return { provider: "claude", token };
+    const available = await resolveClaudeAuth();
+    if (available) return { provider: "claude", token: "cli" };
 
     throw new Error(
-      `\n${chalk.bold("No Claude Code session found.")}\n\n` +
+      `\n${chalk.bold("Claude Code is not installed or not signed in.")}\n\n` +
         `kiyas uses your existing Claude Code subscription — no API keys needed.\n\n` +
         `To fix this, either:\n\n` +
-        `  1. Sign into Claude Code:\n` +
+        `  1. Install and sign into Claude Code:\n` +
+        `     ${chalk.cyan("npm install -g @anthropic-ai/claude-code")}\n` +
         `     ${chalk.cyan("claude auth login")}\n\n` +
         `  2. Or switch kiyas to use OpenAI instead:\n` +
         `     ${chalk.cyan("kiyas set model openai")}\n` +

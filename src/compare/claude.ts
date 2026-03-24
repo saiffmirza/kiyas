@@ -1,81 +1,53 @@
-import { readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { resolve } from "node:path";
 import type { Discrepancy } from "./index.js";
+
+const execFileAsync = promisify(execFile);
 
 export async function compareWithClaude(
   designPath: string,
   implPath: string,
   prompt: string,
-  token: string
+  _token: string
 ): Promise<Discrepancy[]> {
-  const [designBuf, implBuf] = await Promise.all([
-    readFile(designPath),
-    readFile(implPath),
-  ]);
+  const absDesign = resolve(designPath);
+  const absImpl = resolve(implPath);
 
-  const designBase64 = designBuf.toString("base64");
-  const implBase64 = implBuf.toString("base64");
+  const fullPrompt = [
+    `Read the image at "${absDesign}". This is the Figma design (expected state).`,
+    `Read the image at "${absImpl}". This is the implementation screenshot (actual state).`,
+    prompt,
+  ].join("\n\n");
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": token,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6-20250514",
-      max_tokens: 4096,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: "image/png",
-                data: designBase64,
-              },
-            },
-            {
-              type: "text",
-              text: "This is the Figma design (expected state).",
-            },
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: "image/png",
-                data: implBase64,
-              },
-            },
-            {
-              type: "text",
-              text: "This is the implementation screenshot (actual state).",
-            },
-            {
-              type: "text",
-              text: prompt,
-            },
-          ],
-        },
-      ],
-    }),
-  });
+  const { stdout } = await execFileAsync(
+    "claude",
+    [
+      "-p",
+      fullPrompt,
+      "--output-format",
+      "text",
+      "--allowedTools",
+      "Read",
+      "--max-turns",
+      "5",
+    ],
+    {
+      timeout: 120_000,
+      maxBuffer: 10 * 1024 * 1024,
+    }
+  );
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Claude API error (${res.status}): ${body}`);
+  const text = stdout.trim();
+
+  // Extract JSON from response (handle possible markdown fences)
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) {
+    if (text.includes("[]") || text.toLowerCase().includes("matches")) {
+      return [];
+    }
+    throw new Error(`Could not parse Claude response as JSON:\n${text.slice(0, 500)}`);
   }
 
-  const data = (await res.json()) as {
-    content: Array<{ type: string; text?: string }>;
-  };
-
-  const textBlock = data.content.find((b) => b.type === "text");
-  if (!textBlock?.text) {
-    throw new Error("Claude returned no text response");
-  }
-
-  return JSON.parse(textBlock.text) as Discrepancy[];
+  return JSON.parse(jsonMatch[0]) as Discrepancy[];
 }

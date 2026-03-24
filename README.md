@@ -28,11 +28,11 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
               ┌──────────────┐ ┌───────────┐ ┌─────────────┐
               │ 1. Auth      │ │ 2. Figma  │ │ 3. Resolve  │
               │              │ │  Capture  │ │  Component  │
-              │ Read Claude  │ │           │ │             │
-              │ Code / Codex │ │ Export    │ │ AI agent    │
-              │ OAuth token  │ │ frame as  │ │ searches    │
-              │ from macOS   │ │ PNG via   │ │ codebase,   │
-              │ Keychain     │ │ Figma     │ │ finds URL + │
+              │ Verify       │ │           │ │             │
+              │ Claude Code  │ │ Export    │ │ AI agent    │
+              │ or Codex CLI │ │ frame as  │ │ searches    │
+              │ is installed │ │ PNG via   │ │ codebase,   │
+              │ & signed in  │ │ Figma     │ │ finds URL + │
               │              │ │ REST API  │ │ CSS selector│
               └──────┬───────┘ └─────┬─────┘ └──────┬──────┘
                      │               │               │
@@ -49,9 +49,8 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
                      └─────────►│ 4. Vision AI Compare │
                                 │                      │
                                 │ Both images sent to  │
-                                │ Claude / OpenAI as   │
-                                │ base64 with a        │
-                                │ structured prompt     │
+                                │ Claude Code CLI with │
+                                │ a structured prompt   │
                                 │                      │
                                 │ Returns JSON array   │
                                 │ of discrepancies     │
@@ -72,11 +71,11 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
 
 **Step-by-step:**
 
-1. **Authenticate** — kiyas reads your existing Claude Code or Codex OAuth token from the macOS Keychain. No API keys needed.
+1. **Authenticate** — kiyas delegates AI calls to the Claude Code or Codex CLI. Your existing subscription handles everything — no API keys needed.
 2. **Export Figma design** — Parses the Figma URL, calls the Figma REST API to export the frame as a 2x PNG, and fetches node metadata (colors, fonts, spacing).
 3. **Resolve component** — An AI agent scans your codebase (file tree, routes, components) and maps your natural-language description to a URL on your dev server + a CSS selector.
 4. **Screenshot implementation** — Playwright launches headless Chromium, navigates to the resolved URL, and captures the component.
-5. **AI comparison** — Both PNGs are sent to the vision API with a structured prompt. The AI identifies every discrepancy with specific CSS properties and values.
+5. **AI comparison** — Both PNGs are passed to the Claude Code CLI with a structured prompt. The AI identifies every discrepancy with specific CSS properties and values.
 6. **Report** — Results are formatted into a severity-grouped markdown report, printed to the terminal, and optionally saved to a file.
 
 ---
@@ -86,7 +85,7 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
 ### Prerequisites
 
 - Node.js 20+
-- Signed into [Claude Code](https://claude.ai/code) or [Codex](https://platform.openai.com/docs/guides/codex) (for AI auth)
+- [Claude Code](https://claude.ai/code) installed and signed in (Pro, Max, or Team subscription), or [Codex](https://platform.openai.com/docs/guides/codex) for OpenAI
 - A Figma personal access token ([generate one here](https://www.figma.com/developers/api#access-tokens))
 
 ### Install
@@ -164,34 +163,40 @@ _\*Provide either `--component` or `--target`. When using `--component`, kiyas u
 
 ## Authentication
 
-kiyas leverages your existing AI subscriptions — no separate API keys needed.
+kiyas leverages your existing AI subscriptions — no separate API keys needed. It delegates all AI calls to the Claude Code or Codex CLI, which handle their own authentication.
 
-**Claude (default):** If you're signed into Claude Code with a Pro, Max, or Team subscription, kiyas reads the OAuth token from your macOS Keychain automatically. Usage counts against your existing subscription quota.
+**Claude (default):** Requires [Claude Code](https://claude.ai/code) installed and signed in with a Pro, Max, or Team subscription. kiyas spawns the `claude` CLI for AI calls, so usage counts against your existing subscription quota.
 
-**OpenAI (alternative):** If you're signed into Codex, kiyas reads that token instead. Use `--model openai` to select it.
+```bash
+# Install Claude Code if you haven't already
+npm install -g @anthropic-ai/claude-code
 
-**Auth resolution order:**
+# Sign in
+claude auth login
+```
 
-| Provider | Priority                                         |
-| -------- | ------------------------------------------------ |
-| Claude   | 1. macOS Keychain (`Claude Code-credentials`)    |
-|          | 2. `CLAUDE_CODE_OAUTH_TOKEN` env var             |
-|          | 3. `~/.claude/.credentials.json` (Linux/Windows) |
-| OpenAI   | 1. macOS Keychain (`codex-credentials`)          |
-|          | 2. `~/.codex/auth.json`                          |
+**OpenAI (alternative):** Requires [Codex](https://platform.openai.com/docs/guides/codex) installed and signed in. Use `--model openai` to select it.
 
-If no session is found, kiyas prompts you to sign in:
+```bash
+codex auth login
+```
+
+If no CLI is found, kiyas prompts you to install and sign in:
 
 ```
-No Claude Code session found.
+Claude Code is not installed or not signed in.
 
 kiyas uses your existing Claude Code subscription — no API keys needed.
 
-Sign in by running:
+To fix this, either:
 
-  claude auth login
+  1. Install and sign into Claude Code:
+     npm install -g @anthropic-ai/claude-code
+     claude auth login
 
-Then re-run kiyas.
+  2. Or switch kiyas to use OpenAI instead:
+     kiyas set model openai
+     (requires signing into Codex: codex auth login)
 ```
 
 **Figma:** Requires a personal access token. Set it in `.env` as `FIGMA_ACCESS_TOKEN` or in a `.kiyasrc` file.
@@ -278,8 +283,8 @@ kiyas/
 │   ├── config.ts               # Config file loading + Figma token resolution
 │   ├── auth/
 │   │   ├── index.ts            # Auth resolver (picks best available auth)
-│   │   ├── claude-oauth.ts     # Read Claude Code OAuth token from Keychain
-│   │   └── openai-auth.ts      # Read Codex OAuth token from Keychain
+│   │   ├── claude-oauth.ts     # Verify Claude Code CLI is available
+│   │   └── openai-auth.ts      # Verify Codex CLI is available
 │   ├── resolve/
 │   │   └── component.ts        # AI agent: finds component in codebase → URL + selector
 │   ├── capture/
@@ -287,8 +292,8 @@ kiyas/
 │   │   └── playwright.ts       # Playwright: headless screenshot of rendered component
 │   ├── compare/
 │   │   ├── index.ts            # Orchestrator: sends images to vision AI
-│   │   ├── claude.ts           # Claude Vision API call
-│   │   ├── openai.ts           # OpenAI Vision API call
+│   │   ├── claude.ts           # Claude comparison via Claude Code CLI
+│   │   ├── openai.ts           # OpenAI comparison via Codex CLI
 │   │   └── prompt.ts           # The comparison prompt (shared across providers)
 │   ├── report/
 │   │   └── markdown.ts         # Format AI response into structured markdown
@@ -311,8 +316,8 @@ kiyas/
 | Runtime              | Node.js (TypeScript)                   |
 | Screenshot capture   | Playwright (headless Chromium)         |
 | Figma export         | Figma REST API                         |
-| AI comparison        | Claude Vision API or OpenAI Vision API |
-| Component resolution | Claude / OpenAI (codebase agent)       |
+| AI comparison        | Claude Code CLI or Codex CLI (vision)  |
+| Component resolution | Claude Code CLI / Codex CLI (agent)    |
 | Output               | Markdown (terminal + file)             |
 | Build                | tsup                                   |
 | Package manager      | npm                                    |
