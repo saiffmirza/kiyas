@@ -65,14 +65,15 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
                                            │
                                            ▼
                                 ┌──────────────────────┐
-                                │ 5. Markdown Report   │
+                                │ 5. HTML Report       │
                                 │                      │
-                                │ Discrepancies sorted │
-                                │ by severity:         │
+                                │ Side-by-side images  │
+                                │ Severity badges      │
+                                │ Interactive filters  │
                                 │ HIGH / MEDIUM / LOW  │
                                 │                      │
-                                │ Printed to terminal  │
-                                │ + optional file      │
+                                │ file:// link in      │
+                                │ terminal output      │
                                 └──────────────────────┘
 ```
 
@@ -83,7 +84,7 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
 3. **Resolve component** — An AI agent scans your codebase (file tree, routes, components) and maps your natural-language description to a URL on your dev server + a CSS selector.
 4. **Screenshot implementation** — Playwright launches headless Chromium, navigates to the resolved URL, and captures the component.
 5. **AI comparison** — Both PNGs are passed to the Claude Code CLI with a structured prompt. The AI identifies every discrepancy with specific CSS properties and values.
-6. **Report** — Results are formatted into a severity-grouped markdown report, printed to the terminal, and optionally saved to a file.
+6. **Report** — Results are formatted into an HTML report with side-by-side image comparison, severity badges, and interactive filters. A file link is printed to the terminal for easy access.
 
 ---
 
@@ -135,10 +136,15 @@ kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
   --target "http://localhost:3000/redemption" \
   --selector ".event-header"
 
-# Save the report to a file
+# Save the report to a specific path
 kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
   --component "primary button" \
-  --output report.md
+  --output report.html
+
+# Output as JSON (for CI pipelines)
+kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
+  --component "primary button" \
+  --format json
 
 # Use OpenAI instead of Claude
 kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
@@ -157,7 +163,8 @@ kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
 | `--target <url>`            | Direct URL of the rendered component (skips AI lookup)        | Yes\*    |
 | `--dev-server <url>`        | Dev server base URL (default: `http://localhost:3000`)        | No       |
 | `--model <provider>`        | AI provider: `claude` (default) or `openai`                   | No       |
-| `--output <path>`           | Path to save the markdown report                              | No       |
+| `--output <path>`           | Path to save the report (default: `kiyas-report-<timestamp>.html`) | No  |
+| `--format <type>`           | Output format: `html` (default) or `json`                     | No       |
 | `--viewport <size>`         | Viewport size for screenshot (default: `1280x720`)            | No       |
 | `--selector <css>`          | CSS selector to screenshot a specific element                 | No       |
 | `--wait <ms>`               | Time in ms to wait before screenshot (for animations/loading) | No       |
@@ -243,44 +250,6 @@ kiyas --config ./kiyas.config.json
 
 ---
 
-## Example Report
-
-```markdown
-# kiyas Report: Primary Button
-
-**Date:** 2026-03-19
-**Figma:** https://www.figma.com/design/abc123/Design?node-id=1:234
-**Target:** http://localhost:3000/login
-**Model:** Claude Sonnet 4.6
-
-## Summary
-
-Found **4 discrepancies** (1 high, 2 medium, 1 low)
-
-## Discrepancies
-
-### HIGH
-
-| Element | Property      | Expected (Design) | Actual (Implementation) |
-| ------- | ------------- | ----------------- | ----------------------- |
-| Button  | border-radius | 12px              | 8px                     |
-
-### MEDIUM
-
-| Element      | Property    | Expected (Design) | Actual (Implementation) |
-| ------------ | ----------- | ----------------- | ----------------------- |
-| Button label | font-weight | 600 (semibold)    | 400 (regular)           |
-| Button       | padding     | 12px 24px         | 8px 16px                |
-
-### LOW
-
-| Element | Property   | Expected (Design)  | Actual (Implementation) |
-| ------- | ---------- | ------------------ | ----------------------- |
-| Button  | box-shadow | subtle drop shadow | none                    |
-```
-
----
-
 ## Project Structure
 
 ```
@@ -303,7 +272,7 @@ kiyas/
 │   │   ├── openai.ts           # OpenAI comparison via Codex CLI
 │   │   └── prompt.ts           # The comparison prompt (shared across providers)
 │   ├── report/
-│   │   └── markdown.ts         # Format AI response into structured markdown
+│   │   └── html.ts             # Generate self-contained HTML report with embedded images
 │   └── utils/
 │       ├── parse-figma-url.ts  # Extract file key + node ID from Figma URL
 │       └── logger.ts           # Minimal logging utility
@@ -325,7 +294,7 @@ kiyas/
 | Figma export         | Figma REST API                         |
 | AI comparison        | Claude Code CLI or Codex CLI (vision)  |
 | Component resolution | Claude Code CLI / Codex CLI (agent)    |
-| Output               | Markdown (terminal + file)             |
+| Output               | HTML (default), JSON                   |
 | Build                | tsup                                   |
 | Package manager      | npm                                    |
 

@@ -4,3 +4,8 @@ dist/
 .kiyasrc
 *.tgz
 .vscode/
+
+# Generated reports and screenshots
+kiyas-report-*
+kiyas-design-*
+kiyas-impl-*

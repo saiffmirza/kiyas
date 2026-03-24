@@ -2,15 +2,15 @@ import "dotenv/config";
 import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
-import { writeFile } from "node:fs/promises";
-import { unlink } from "node:fs/promises";
+import { writeFile, copyFile, unlink } from "node:fs/promises";
+import { dirname, join, basename, resolve } from "node:path";
 import { resolveAuth } from "./auth/index.js";
 import { resolveFigmaToken, loadConfigFile } from "./config.js";
 import { captureFigma } from "./capture/figma.js";
 import { capturePlaywright } from "./capture/playwright.js";
 import { compareImages, type Discrepancy } from "./compare/index.js";
 import { resolveComponent } from "./resolve/component.js";
-import { generateMarkdownReport } from "./report/markdown.js";
+import { generateHtmlReport } from "./report/html.js";
 import { loadSettings, saveSetting, getAllSettings } from "./settings.js";
 import { log } from "./utils/logger.js";
 
@@ -87,12 +87,13 @@ program
     "AI provider: claude or openai",
     settings.model ?? "claude"
   )
-  .option("--output <path>", "Path to save the markdown report")
+  .option("--output <path>", "Path to save the report (default: kiyas-report-<timestamp>.html)")
   .option("--viewport <size>", "Viewport size for screenshot", settings.viewport ?? "1280x720")
   .option("--selector <css>", "CSS selector to screenshot a specific element")
   .option("--wait <ms>", "Time in ms to wait before screenshot", parseInt)
   .option("--config <path>", "Path to a JSON config file for batch comparisons")
   .option("--threshold <level>", "Severity threshold: all, medium, high", settings.threshold ?? "all")
+  .option("--format <type>", "Output format: html (default) or json", settings.format ?? "html")
   .action(async (opts) => {
     try {
       await run(opts);
@@ -116,6 +117,7 @@ interface CLIOptions {
   selector?: string;
   wait?: number;
   config?: string;
+  format: "html" | "json";
   threshold: "all" | "medium" | "high";
 }
 
@@ -200,6 +202,7 @@ async function run(opts: CLIOptions) {
     selector,
     wait: opts.wait,
     threshold: opts.threshold,
+    format: opts.format,
     output: opts.output,
     name: componentName,
   });
@@ -256,6 +259,7 @@ async function runBatchMode(opts: CLIOptions) {
       selector,
       wait: comparison.wait ?? opts.wait,
       threshold: comparison.threshold ?? opts.threshold,
+      format: opts.format,
       output: opts.output,
       name: comparison.name,
     });
@@ -272,6 +276,7 @@ interface ComparisonParams {
   selector?: string;
   wait?: number;
   threshold: "all" | "medium" | "high";
+  format: "html" | "json";
   output?: string;
   name?: string;
 }
@@ -322,22 +327,75 @@ async function runSingleComparison(params: ComparisonParams) {
       throw err;
     }
 
-    // Step 4: Generate report
-    const report = generateMarkdownReport({
+    // Step 4: Determine output path
+    const ext = params.format === "json" ? "json" : "html";
+    const timestamp = Date.now();
+    const outputPath = params.output ?? `kiyas-report-${timestamp}.${ext}`;
+    const outputDir = dirname(resolve(outputPath));
+
+    // Save images alongside report
+    const designFilename = `kiyas-design-${timestamp}.png`;
+    const implFilename = `kiyas-impl-${timestamp}.png`;
+    const designDest = join(outputDir, designFilename);
+    const implDest = join(outputDir, implFilename);
+
+    await copyFile(figmaCapture.imagePath, designDest);
+    await copyFile(implPath, implDest);
+
+    // Step 5: Generate report
+    const reportOpts = {
       name: params.name,
       figmaUrl: params.figmaUrl,
       targetUrl: params.targetUrl,
       model: modelLabel,
       discrepancies,
       threshold: params.threshold,
-    });
+      designImagePath: designFilename,
+      implImagePath: implFilename,
+    };
 
-    console.log("\n" + report);
-
-    if (params.output) {
-      await writeFile(params.output, report, "utf-8");
-      log.success(`Report saved to ${params.output}`);
+    let report: string;
+    if (params.format === "json") {
+      report = JSON.stringify(
+        { ...reportOpts, date: new Date().toISOString().split("T")[0] },
+        null,
+        2
+      );
+    } else {
+      report = await generateHtmlReport({
+        ...reportOpts,
+        designImagePath: designDest,
+        implImagePath: implDest,
+      });
     }
+
+    // Print summary to terminal
+    const high = discrepancies.filter((d) => d.severity === "HIGH");
+    const medium = discrepancies.filter((d) => d.severity === "MEDIUM");
+    const low = discrepancies.filter((d) => d.severity === "LOW");
+
+    console.log("");
+    log.success(
+      `Found ${chalk.bold(String(discrepancies.length))} discrepancies` +
+        (discrepancies.length > 0
+          ? ` (${[
+              high.length ? `${high.length} high` : "",
+              medium.length ? `${medium.length} medium` : "",
+              low.length ? `${low.length} low` : "",
+            ]
+              .filter(Boolean)
+              .join(", ")})`
+          : "")
+    );
+
+    // Always save to file
+    await writeFile(outputPath, report, "utf-8");
+
+    const absolutePath = resolve(outputPath);
+    console.log("");
+    log.success(`Report saved to ${chalk.bold(outputPath)}`);
+    console.log(chalk.dim(`  file://${absolutePath}`));
+    console.log("");
   } finally {
     for (const f of tempFiles) {
       try {
