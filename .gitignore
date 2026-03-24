@@ -3,6 +3,7 @@ dist/
 .env
 .kiyasrc
 *.tgz
+FUTURE.md
 .vscode/
 
 # Generated reports and screenshots

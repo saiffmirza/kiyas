@@ -289,21 +289,6 @@ kiyas/
 
 ---
 
-## Stretch Goals
-
-These are not part of the MVP:
-
-- CI integration (GitHub Actions, CircleCI)
-- PR comment posting with the report
-- Figma node metadata enrichment (pull actual design token values)
-- Side-by-side image output in the report
-- Interactive mode to step through discrepancies
-- Caching Figma exports by `lastModified` timestamp
-- Storybook addon wrapper
-- Web dashboard for team use
-
----
-
 ## License
 
 MIT

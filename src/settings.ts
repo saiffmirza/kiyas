@@ -10,11 +10,13 @@ export interface KiyasSettings {
   devServer?: string;
   viewport?: string;
   threshold?: "all" | "medium" | "high";
+  format?: "html" | "json";
 }
 
 const VALID_KEYS: Record<string, string[]> = {
   model: ["claude", "openai"],
   threshold: ["all", "medium", "high"],
+  format: ["html", "json"],
 };
 
 export function loadSettings(): KiyasSettings {
