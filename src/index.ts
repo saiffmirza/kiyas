@@ -1,16 +1,12 @@
 import "dotenv/config";
 import { Command } from "commander";
 import chalk from "chalk";
-import ora from "ora";
-import { writeFile, copyFile, unlink } from "node:fs/promises";
-import { dirname, join, basename, resolve } from "node:path";
+import ora, { type Ora } from "ora";
+import { resolve } from "node:path";
 import { resolveAuth } from "./auth/index.js";
 import { ensureFigmaToken, loadConfigFile } from "./config.js";
-import { captureFigma } from "./capture/figma.js";
-import { capturePlaywright } from "./capture/playwright.js";
-import { compareImages, type Discrepancy } from "./compare/index.js";
 import { resolveComponent } from "./resolve/component.js";
-import { generateHtmlReport } from "./report/html.js";
+import { runComparison, type ProgressEvent } from "./compare/pipeline.js";
 import { loadSettings, saveSetting, getAllSettings } from "./settings.js";
 import { log } from "./utils/logger.js";
 import { runSetup } from "./setup.js";
@@ -80,6 +76,21 @@ program
     }
   });
 
+program
+  .command("mcp")
+  .description("Start the kiyas MCP server (stdio transport)")
+  .action(async () => {
+    try {
+      const { startMcpServer } = await import("./mcp/server.js");
+      await startMcpServer();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      // MCP runs on stdio; route diagnostics to stderr only
+      console.error(message);
+      process.exit(1);
+    }
+  });
+
 // --- main compare command (default) ---
 program
   .option("--figma <url>", "Figma frame/component URL")
@@ -105,6 +116,10 @@ program
   .option("--viewport <size>", "Viewport size for screenshot", settings.viewport ?? "1280x720")
   .option("--selector <css>", "CSS selector to screenshot a specific element")
   .option("--wait <ms>", "Time in ms to wait before screenshot", parseInt)
+  .option(
+    "--auth-state <path>",
+    "Path to a Playwright storageState JSON file for authenticated screenshots"
+  )
   .option("--config <path>", "Path to a JSON config file for batch comparisons")
   .option("--threshold <level>", "Severity threshold: all, medium, high", settings.threshold ?? "all")
   .option("--format <type>", "Output format: html (default) or json", settings.format ?? "html")
@@ -130,6 +145,7 @@ interface CLIOptions {
   viewport: string;
   selector?: string;
   wait?: number;
+  authState?: string;
   config?: string;
   format: "html" | "json";
   threshold: "all" | "medium" | "high";
@@ -210,6 +226,7 @@ async function run(opts: CLIOptions) {
     viewport: opts.viewport,
     selector,
     wait: opts.wait,
+    authState: opts.authState,
     threshold: opts.threshold,
     format: opts.format,
     output: opts.output,
@@ -262,6 +279,7 @@ async function runBatchMode(opts: CLIOptions) {
       viewport: comparison.viewport ?? config.viewport ?? opts.viewport,
       selector,
       wait: comparison.wait ?? opts.wait,
+      authState: comparison.authState ?? config.authState ?? opts.authState,
       threshold: comparison.threshold ?? opts.threshold,
       format: opts.format,
       output: opts.output,
@@ -279,6 +297,7 @@ interface ComparisonParams {
   viewport: string;
   selector?: string;
   wait?: number;
+  authState?: string;
   threshold: "all" | "medium" | "high";
   format: "html" | "json";
   output?: string;
@@ -286,127 +305,65 @@ interface ComparisonParams {
 }
 
 async function runSingleComparison(params: ComparisonParams) {
-  const tempFiles: string[] = [];
-
-  try {
-    // Step 1: Capture Figma design
-    const figmaSpinner = ora("Exporting Figma design...").start();
-    const figmaCapture = await captureFigma(
-      params.figmaUrl,
-      params.figmaToken
-    );
-    tempFiles.push(figmaCapture.imagePath);
-    figmaSpinner.succeed("Figma design exported");
-
-    // Step 2: Capture implementation screenshot
-    const implSpinner = ora(
-      `Screenshotting ${params.targetUrl}...`
-    ).start();
-    const implPath = await capturePlaywright({
-      url: params.targetUrl,
-      viewport: params.viewport,
-      selector: params.selector,
-      wait: params.wait,
-    });
-    tempFiles.push(implPath);
-    implSpinner.succeed("Implementation screenshot captured");
-
-    // Step 3: AI comparison
-    const modelLabel =
-      params.model === "claude" ? "Claude Sonnet 4.6" : "GPT-4o";
-    const compareSpinner = ora(`Analyzing with ${modelLabel}...`).start();
-
-    let discrepancies: Discrepancy[];
-    try {
-      discrepancies = await compareImages({
-        designPath: figmaCapture.imagePath,
-        implPath,
-        provider: params.model,
-        token: params.token,
-        metadata: figmaCapture.metadata,
-      });
-      compareSpinner.succeed(`Analysis complete (${modelLabel})`);
-    } catch (err) {
-      compareSpinner.fail("AI analysis failed");
-      throw err;
+  let activeSpinner: Ora | undefined;
+  const onProgress = (event: ProgressEvent) => {
+    if (event.status === "start") {
+      activeSpinner = ora(progressLabel(event)).start();
+      return;
     }
-
-    // Step 4: Determine output path
-    const ext = params.format === "json" ? "json" : "html";
-    const timestamp = Date.now();
-    const outputPath = params.output ?? `kiyas-report-${timestamp}.${ext}`;
-    const outputDir = dirname(resolve(outputPath));
-
-    // Save images alongside report
-    const designFilename = `kiyas-design-${timestamp}.png`;
-    const implFilename = `kiyas-impl-${timestamp}.png`;
-    const designDest = join(outputDir, designFilename);
-    const implDest = join(outputDir, implFilename);
-
-    await copyFile(figmaCapture.imagePath, designDest);
-    await copyFile(implPath, implDest);
-
-    // Step 5: Generate report
-    const reportOpts = {
-      name: params.name,
-      figmaUrl: params.figmaUrl,
-      targetUrl: params.targetUrl,
-      model: modelLabel,
-      discrepancies,
-      threshold: params.threshold,
-      designImagePath: designFilename,
-      implImagePath: implFilename,
-    };
-
-    let report: string;
-    if (params.format === "json") {
-      report = JSON.stringify(
-        { ...reportOpts, date: new Date().toISOString().split("T")[0] },
-        null,
-        2
-      );
-    } else {
-      report = await generateHtmlReport({
-        ...reportOpts,
-        designImagePath: designDest,
-        implImagePath: implDest,
-      });
+    if (event.status === "done") {
+      activeSpinner?.succeed(progressLabel(event));
+      activeSpinner = undefined;
+      return;
     }
+    activeSpinner?.fail(progressLabel(event));
+    activeSpinner = undefined;
+  };
 
-    // Print summary to terminal
-    const high = discrepancies.filter((d) => d.severity === "HIGH");
-    const medium = discrepancies.filter((d) => d.severity === "MEDIUM");
-    const low = discrepancies.filter((d) => d.severity === "LOW");
+  const result = await runComparison({ ...params, onProgress });
 
-    console.log("");
-    log.success(
-      `Found ${chalk.bold(String(discrepancies.length))} discrepancies` +
-        (discrepancies.length > 0
-          ? ` (${[
-              high.length ? `${high.length} high` : "",
-              medium.length ? `${medium.length} medium` : "",
-              low.length ? `${low.length} low` : "",
-            ]
-              .filter(Boolean)
-              .join(", ")})`
-          : "")
-    );
+  // Print summary to terminal
+  const { summary } = result;
+  console.log("");
+  log.success(
+    `Found ${chalk.bold(String(summary.total))} discrepancies` +
+      (summary.total > 0
+        ? ` (${[
+            summary.high ? `${summary.high} high` : "",
+            summary.medium ? `${summary.medium} medium` : "",
+            summary.low ? `${summary.low} low` : "",
+          ]
+            .filter(Boolean)
+            .join(", ")})`
+        : "")
+  );
 
-    // Always save to file
-    await writeFile(outputPath, report, "utf-8");
+  const finalPath = params.output ? resolve(params.output) : result.reportPath;
+  console.log("");
+  log.success(`Report saved to ${chalk.bold(finalPath)}`);
+  console.log(chalk.dim(`  file://${finalPath}`));
+  console.log("");
+}
 
-    const absolutePath = resolve(outputPath);
-    console.log("");
-    log.success(`Report saved to ${chalk.bold(outputPath)}`);
-    console.log(chalk.dim(`  file://${absolutePath}`));
-    console.log("");
-  } finally {
-    for (const f of tempFiles) {
-      try {
-        await unlink(f);
-      } catch {
-        // ignore
-      }
-    }
+function progressLabel(event: ProgressEvent): string {
+  switch (event.step) {
+    case "figma":
+      return event.status === "start"
+        ? "Exporting Figma design..."
+        : "Figma design exported";
+    case "screenshot":
+      return event.status === "start"
+        ? `Screenshotting ${event.message}...`
+        : "Implementation screenshot captured";
+    case "compare":
+      return event.status === "start"
+        ? `Analyzing with ${event.message}...`
+        : event.status === "done"
+          ? `Analysis complete (${event.message ?? ""})`.trim()
+          : "AI analysis failed";
+    case "report":
+      return event.status === "start"
+        ? "Generating report..."
+        : "Report generated";
   }
 }

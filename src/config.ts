@@ -12,6 +12,7 @@ export interface ComparisonConfig {
   selector?: string;
   viewport?: string;
   wait?: number;
+  authState?: string;
   threshold?: "all" | "medium" | "high";
 }
 
@@ -19,6 +20,7 @@ export interface KiyasConfig {
   figmaAccessToken?: string;
   model?: "claude" | "openai";
   viewport?: string;
+  authState?: string;
   comparisons: ComparisonConfig[];
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "kiyas-cli",
   "version": "1.0.1",
-  "description": "AI-powered design fidelity CLI — compare Figma designs against rendered UI",
+  "description": "MCP server and CLI for AI-powered design fidelity — compare Figma designs against rendered UI",
   "type": "module",
   "bin": {
     "kiyas": "./dist/index.js"
@@ -13,12 +13,18 @@
     "postinstall": "node scripts/postinstall.js"
   },
   "keywords": [
+    "mcp",
+    "model-context-protocol",
     "figma",
     "design",
+    "design-system",
     "qa",
     "cli",
     "ai",
-    "vision"
+    "vision",
+    "claude",
+    "cursor",
+    "codex"
   ],
   "license": "MIT",
   "files": [
@@ -28,11 +34,13 @@
     "README.md"
   ],
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "chalk": "^5.4.1",
     "commander": "^12.1.0",
     "dotenv": "^17.3.1",
     "ora": "^8.1.1",
-    "playwright": "^1.49.0"
+    "playwright": "^1.49.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",

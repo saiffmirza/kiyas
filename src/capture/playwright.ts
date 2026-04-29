@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
 export interface PlaywrightCaptureOptions {
@@ -6,6 +7,13 @@ export interface PlaywrightCaptureOptions {
   viewport?: string;
   selector?: string;
   wait?: number;
+  /**
+   * Path to a Playwright storageState JSON file (cookies + localStorage).
+   * Lets kiyas screenshot authenticated views the same way your tests do.
+   * Generate one with `playwright codegen --save-storage=auth.json` or via
+   * a global-setup test that calls `context.storageState({ path })`.
+   */
+  authState?: string;
 }
 
 export async function capturePlaywright(
@@ -17,8 +25,20 @@ export async function capturePlaywright(
   const browser = await chromium.launch();
 
   try {
+    let storageState: string | undefined;
+    if (options.authState) {
+      storageState = resolve(options.authState);
+      if (!existsSync(storageState)) {
+        throw new Error(
+          `Auth state file not found at ${storageState}. ` +
+            `Generate one with \`npx playwright codegen --save-storage=${options.authState}\`.`
+        );
+      }
+    }
+
     const context = await browser.newContext({
       viewport: { width, height },
+      storageState,
     });
     const page = await context.newPage();
 

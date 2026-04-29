@@ -3,13 +3,13 @@
 </p>
 
 <p align="center">
-  <strong>AI-Powered Design Fidelity CLI</strong><br>
+  <strong>AI-Powered Design Fidelity — MCP Server &amp; CLI</strong><br>
   <em>"comparison" — pronounced "key-AHS"</em>
 </p>
 
 ---
 
-A developer-first CLI tool that compares Figma designs against rendered UI components and generates an AI-powered semantic diff report.
+A developer-first **MCP server** (also runnable as a CLI) that compares Figma designs against rendered UI components and surfaces an AI-powered semantic diff. Plugs into Claude Code, Cursor, Codex CLI, and any other MCP-compatible client.
 
 Unlike pixel-diff tools, kiyas uses vision AI to understand _what_ is different and _why_ it matters — outputting actionable, human-readable feedback like:
 
@@ -24,10 +24,11 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
 
 ```
                           ┌─────────────────────┐
-                          │   kiyas CLI          │
+                          │  kiyas               │
+                          │  (MCP server / CLI)  │
                           │                      │
-                          │  --figma <url>       │
-                          │  --component "..."   │
+                          │  figma + target      │
+                          │  / component         │
                           └──────────┬───────────┘
                                      │
                       ┌──────────────┼──────────────┐
@@ -88,7 +89,63 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
 
 ---
 
-## Quick Start
+## Use as an MCP Server
+
+kiyas exposes its comparison engine as an [MCP](https://modelcontextprotocol.io) server over stdio. Three tools, all with Zod-typed input schemas:
+
+| Tool              | Description                                                                 | Required input                |
+| ----------------- | --------------------------------------------------------------------------- | ----------------------------- |
+| `compare`         | Run a fresh Figma-vs-implementation comparison; returns `reportId` + summary | `figma` + (`target` or `component`) |
+| `get_diff_report` | Fetch a stored report's HTML or JSON content                                | `reportId`                    |
+| `list_issues`     | List discrepancies from a stored report, optionally filtered by severity    | `reportId`                    |
+
+Reports are persisted under `.kiyas/reports/<reportId>/` in your project directory, so the same `reportId` stays valid across calls and across CLI/MCP usage.
+
+### Install
+
+```bash
+npm install -g kiyas-cli
+npx playwright install chromium
+```
+
+### Wire it up
+
+**Claude Code**
+
+```bash
+claude mcp add kiyas -- npx kiyas-cli mcp
+```
+
+**Cursor** — edit `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "kiyas": {
+      "command": "npx",
+      "args": ["kiyas-cli", "mcp"]
+    }
+  }
+}
+```
+
+**Codex CLI** — edit `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.kiyas]
+command = "npx"
+args    = ["kiyas-cli", "mcp"]
+```
+
+Once connected, you can ask the agent things like:
+
+> Compare the Figma frame at `<url>` against the primary button on the login page, then list only the high-severity issues.
+
+The agent will call `compare` to produce a `reportId`, then `list_issues` with `severity: "high"` against that ID.
+
+---
+
+## Quick Start (CLI)
 
 ### Prerequisites
 
@@ -157,10 +214,30 @@ kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
 | `--viewport <size>`         | Viewport size for screenshot (default: `1280x720`)            | No       |
 | `--selector <css>`          | CSS selector to screenshot a specific element                 | No       |
 | `--wait <ms>`               | Time in ms to wait before screenshot (for animations/loading) | No       |
+| `--auth-state <path>`       | Playwright `storageState` JSON for authenticated screenshots  | No       |
 | `--config <path>`           | Path to a JSON config file for batch comparisons              | No       |
 | `--threshold <level>`       | Severity filter: `all`, `medium`, `high` (default: `all`)     | No       |
 
 _\*Provide either `--component` or `--target`. When using `--component`, kiyas uses AI to find the component in your codebase and resolve it to a URL._
+
+---
+
+## Authenticated screenshots
+
+Most real designs live behind a login. kiyas accepts a Playwright [`storageState`](https://playwright.dev/docs/api/class-browser#browser-new-context-option-storage-state) JSON file (cookies + localStorage) and reuses it for the screenshot session — the same format Playwright tests use, so any auth-state file your tests already produce works as-is.
+
+```bash
+# 1. Record a session — log in, then close the browser. Playwright writes auth.json.
+npx playwright codegen --save-storage=auth.json https://app.example.com
+
+# 2. Use it for kiyas screenshots
+kiyas \
+  --figma "https://www.figma.com/design/.../?node-id=1:234" \
+  --target "https://app.example.com/dashboard" \
+  --auth-state ./auth.json
+```
+
+The MCP `compare` tool exposes the same option as `authState` — pass the path and the agent screenshots authenticated views with no further setup.
 
 ---
 
@@ -257,9 +334,13 @@ kiyas/
 │   │   └── playwright.ts       # Playwright: headless screenshot of rendered component
 │   ├── compare/
 │   │   ├── index.ts            # Orchestrator: sends images to vision AI
+│   │   ├── pipeline.ts         # Pure runComparison() + report persistence (shared by CLI + MCP)
 │   │   ├── claude.ts           # Claude comparison via Claude Code CLI
 │   │   ├── openai.ts           # OpenAI comparison via Codex CLI
 │   │   └── prompt.ts           # The comparison prompt (shared across providers)
+│   ├── mcp/
+│   │   ├── server.ts           # MCP server bootstrap (stdio transport)
+│   │   └── tools.ts            # Zod schemas + handlers (compare, get_diff_report, list_issues)
 │   ├── report/
 │   │   └── html.ts             # Generate self-contained HTML report with embedded images
 │   └── utils/
@@ -276,16 +357,17 @@ kiyas/
 
 ## Tech Stack
 
-| Layer                | Tool                                   |
-| -------------------- | -------------------------------------- |
-| Runtime              | Node.js (TypeScript)                   |
-| Screenshot capture   | Playwright (headless Chromium)         |
-| Figma export         | Figma REST API                         |
-| AI comparison        | Claude Code CLI or Codex CLI (vision)  |
-| Component resolution | Claude Code CLI / Codex CLI (agent)    |
-| Output               | HTML (default), JSON                   |
-| Build                | tsup                                   |
-| Package manager      | npm                                    |
+| Layer                | Tool                                              |
+| -------------------- | ------------------------------------------------- |
+| Runtime              | Node.js (TypeScript)                              |
+| MCP                  | `@modelcontextprotocol/sdk`, Zod (stdio transport) |
+| Screenshot capture   | Playwright (headless Chromium)                    |
+| Figma export         | Figma REST API                                    |
+| AI comparison        | Claude Code CLI or Codex CLI (vision)             |
+| Component resolution | Claude Code CLI / Codex CLI (agent)               |
+| Output               | HTML (default), JSON                              |
+| Build                | tsup                                              |
+| Package manager      | npm                                               |
 
 ---
 
