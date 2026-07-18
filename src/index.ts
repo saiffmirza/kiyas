@@ -120,9 +120,8 @@ program
   .option("--viewport <size>", "Viewport size for screenshot", settings.viewport ?? "1280x720")
   .option(
     "--scale <n>",
-    "Render scale applied to both the Figma export and the screenshot",
-    parseFloat,
-    1
+    "Render scale for both the Figma export and the screenshot (default: adaptive — 2 for component-sized captures, 1 for large ones)",
+    parseFloat
   )
   .option(
     "--no-full-page",
@@ -164,7 +163,7 @@ interface CLIOptions {
   model: "claude" | "openai";
   output?: string;
   viewport: string;
-  scale: number;
+  scale?: number;
   fullPage: boolean;
   runs: number;
   selector?: string;

@@ -33,10 +33,12 @@ const { values: args } = parseArgs({
     runs: { type: "string", default: "1" },
     provider: { type: "string", default: "claude" },
     viewport: { type: "string", default: "900x700" },
+    scale: { type: "string", default: "1" },
   },
 });
 
 const runs = parseInt(args.runs!, 10);
+const scale = parseFloat(args.scale!);
 const provider = args.provider as "claude" | "openai";
 const settings = loadSettings();
 const aiModel =
@@ -112,7 +114,7 @@ try {
     const baselineTmp = await capturePlaywright({
       url: `${base}/${fixture}.html`,
       viewport,
-      scale: 1,
+      scale,
     });
     const baseline = join(resultsDir, `${fixture}-baseline.png`);
     await copyFile(baselineTmp, baseline);
@@ -137,6 +139,7 @@ try {
             model: provider,
             aiModel,
             viewport,
+            scale,
             threshold: "all",
             format: "json",
             name: `${fixture}:${mutationId}`,
@@ -207,6 +210,7 @@ await writeFile(
       provider,
       aiModel,
       runsPerPair: runs,
+      scale,
       viewport: args.viewport,
       summary,
       pairs: scores,

@@ -57,7 +57,7 @@ export const compareInputSchema = z.object({
     .positive()
     .optional()
     .describe(
-      "Render scale applied to both the Figma export and the screenshot (default: 1)"
+      "Render scale applied to both the Figma export and the screenshot (default: adaptive — 2 for component-sized captures, 1 for large ones)"
     ),
   fullPage: z
     .boolean()
