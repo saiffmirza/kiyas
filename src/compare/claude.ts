@@ -36,17 +36,20 @@ export async function compareWithClaude(
       "--allowedTools",
       "Read",
       "--max-turns",
-      "3",
+      "6",
     ];
     if (modelId) {
       args.push("--model", modelId);
     }
 
-    const { stdout } = await execFileAsync("claude", args, {
+    const promise = execFileAsync("claude", args, {
       cwd,
       timeout: 120_000,
       maxBuffer: 10 * 1024 * 1024,
     });
+    // Close stdin so the CLI doesn't wait 3s for piped input
+    promise.child.stdin?.end();
+    const { stdout } = await promise;
 
     return parseDiscrepancies(extractJson(stdout, "array"));
   } finally {

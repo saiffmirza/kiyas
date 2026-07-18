@@ -85,11 +85,13 @@ async function resolveWithClaude(
     args.push("--model", modelId);
   }
 
-  const { stdout } = await execFileAsync("claude", args, {
+  const promise = execFileAsync("claude", args, {
     cwd,
     timeout: 180_000,
     maxBuffer: 10 * 1024 * 1024,
   });
+  promise.child.stdin?.end();
+  const { stdout } = await promise;
 
   return stdout;
 }

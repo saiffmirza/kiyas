@@ -128,19 +128,32 @@ try {
         : `${base}/${fixture}.html`;
 
       const runFindings: Discrepancy[][] = [];
+      let pairError: string | undefined;
       for (let i = 0; i < runs; i++) {
-        const result = await runComparison({
-          designImage: baseline,
-          targetUrl,
-          model: provider,
-          aiModel,
-          viewport,
-          threshold: "all",
-          format: "json",
-          name: `${fixture}:${mutationId}`,
-          reportsDir: join(resultsDir, "reports"),
-        });
-        runFindings.push(result.discrepancies);
+        try {
+          const result = await runComparison({
+            designImage: baseline,
+            targetUrl,
+            model: provider,
+            aiModel,
+            viewport,
+            threshold: "all",
+            format: "json",
+            name: `${fixture}:${mutationId}`,
+            reportsDir: join(resultsDir, "reports"),
+          });
+          runFindings.push(result.discrepancies);
+        } catch (err) {
+          pairError = err instanceof Error ? err.message : String(err);
+        }
+      }
+
+      if (runFindings.length === 0) {
+        done++;
+        console.log(
+          `[${done}/${totalPairs}] ${fixture}:${mutationId} — ERROR: ${pairError?.slice(0, 120)}`
+        );
+        continue;
       }
 
       const score = scorePair(fixture, mutationId, mutation?.golden, runFindings);
