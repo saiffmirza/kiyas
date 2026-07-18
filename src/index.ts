@@ -19,7 +19,7 @@ program
   .description(
     "AI-powered design fidelity CLI — compare Figma designs against rendered UI"
   )
-  .version("1.1.0");
+  .version("1.2.0");
 
 // --- subcommands ---
 program
