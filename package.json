@@ -1,6 +1,6 @@
 {
   "name": "kiyas-cli",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "MCP server and CLI for AI-powered design fidelity — compare Figma designs against rendered UI",
   "type": "module",
   "bin": {
