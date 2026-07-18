@@ -128,6 +128,12 @@ program
     "--no-full-page",
     "Capture only the viewport instead of the full scrollable page"
   )
+  .option(
+    "--runs <n>",
+    "Run the comparison N times and keep majority-vote findings (higher consistency, N× cost)",
+    (v: string) => parseInt(v, 10),
+    1
+  )
   .option("--selector <css>", "CSS selector to screenshot a specific element")
   .option("--wait <ms>", "Time in ms to wait before screenshot", parseInt)
   .option(
@@ -160,6 +166,7 @@ interface CLIOptions {
   viewport: string;
   scale: number;
   fullPage: boolean;
+  runs: number;
   selector?: string;
   wait?: number;
   authState?: string;
@@ -251,6 +258,7 @@ async function run(opts: CLIOptions) {
     figmaUrl: opts.figma,
     designImage: opts.design,
     aiModel,
+    runs: opts.runs,
     resolved: resolvedInfo,
     targetUrl: targetUrl!,
     model: auth.provider,
@@ -320,6 +328,7 @@ async function runBatchMode(opts: CLIOptions) {
       figmaUrl: comparison.figma,
       designImage: comparison.design,
       aiModel,
+      runs: opts.runs,
       resolved: resolvedInfo,
       targetUrl,
       model: auth.provider,
@@ -350,6 +359,7 @@ interface ComparisonParams {
   targetUrl: string;
   model: "claude" | "openai";
   aiModel?: string;
+  runs?: number;
   resolved?: { filePath: string; url: string; selector?: string };
   figmaToken?: string;
   viewport: string;

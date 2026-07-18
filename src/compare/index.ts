@@ -12,6 +12,10 @@ export interface Discrepancy {
   expected: string;
   actual: string;
   severity: "HIGH" | "MEDIUM" | "LOW";
+  /** Approximate bounding box in implementation-image pixels. Treat as fuzzy. */
+  region?: { x: number; y: number; width: number; height: number };
+  /** Fraction of ensemble runs that reported this finding (only set with --runs > 1). */
+  confidence?: number;
 }
 
 const discrepancySchema = z.object({
@@ -23,6 +27,17 @@ const discrepancySchema = z.object({
     .string()
     .transform((s) => s.toUpperCase())
     .pipe(z.enum(["HIGH", "MEDIUM", "LOW"])),
+  // Lenient: a malformed region degrades to undefined instead of
+  // invalidating an otherwise-good finding.
+  region: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number(),
+      height: z.number(),
+    })
+    .optional()
+    .catch(undefined),
 });
 
 /**

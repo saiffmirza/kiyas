@@ -65,6 +65,15 @@ export const compareInputSchema = z.object({
     .describe(
       "Capture the full scrollable page when no selector is given (default: true)"
     ),
+  runs: z
+    .number()
+    .int()
+    .min(1)
+    .max(5)
+    .optional()
+    .describe(
+      "Run the comparison N times and keep majority-vote findings — higher consistency at N× cost (default: 1)"
+    ),
   selector: z
     .string()
     .optional()
@@ -181,6 +190,7 @@ export async function handleCompare(input: CompareInput) {
     targetUrl: targetUrl!,
     model: auth.provider,
     aiModel,
+    runs: input.runs,
     resolved: resolvedInfo,
     figmaToken,
     viewport,
