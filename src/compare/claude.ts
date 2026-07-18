@@ -1,7 +1,8 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { resolve } from "node:path";
-import type { Discrepancy } from "./index.js";
+import { parseDiscrepancies, type Discrepancy } from "./index.js";
+import { extractJson } from "./extract-json.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -37,16 +38,5 @@ export async function compareWithClaude(
     }
   );
 
-  const text = stdout.trim();
-
-  // Extract JSON from response (handle possible markdown fences)
-  const jsonMatch = text.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) {
-    if (text.includes("[]") || text.toLowerCase().includes("matches")) {
-      return [];
-    }
-    throw new Error(`Could not parse Claude response as JSON:\n${text.slice(0, 500)}`);
-  }
-
-  return JSON.parse(jsonMatch[0]) as Discrepancy[];
+  return parseDiscrepancies(extractJson(stdout, "array"));
 }

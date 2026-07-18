@@ -23,7 +23,7 @@ Also note:
 ${metadataContext}
 Format your response as a JSON array of objects with the fields: element, property, expected, actual, severity.
 
-If the implementation matches the design perfectly, return an empty array and note that the comparison passed.
+If the implementation matches the design perfectly, return exactly [].
 
 Respond ONLY with valid JSON. No markdown fences, no commentary outside the JSON.`;
 }

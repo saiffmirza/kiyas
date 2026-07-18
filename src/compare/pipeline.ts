@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 import { captureFigma, type FigmaNodeMetadata } from "../capture/figma.js";
 import { capturePlaywright } from "../capture/playwright.js";
 import { generateHtmlReport } from "../report/html.js";
-import { compareImages, type Discrepancy } from "./index.js";
+import { compareImages, parseDiscrepancies, type Discrepancy } from "./index.js";
 
 export interface ProgressEvent {
   step: "figma" | "screenshot" | "compare" | "report";
@@ -292,6 +292,7 @@ export async function loadReport(
 
   return {
     ...parsed,
+    discrepancies: parseDiscrepancies(parsed.discrepancies),
     reportDir,
     reportPath,
     jsonPath,

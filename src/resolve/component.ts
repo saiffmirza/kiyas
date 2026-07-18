@@ -3,6 +3,8 @@ import { promisify } from "node:util";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { z } from "zod";
+import { extractJson } from "../compare/extract-json.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -115,34 +117,37 @@ async function resolveWithCodex(prompt: string, cwd: string): Promise<string> {
   }
 }
 
+const resolvedComponentSchema = z.object({
+  url: z.string().refine(
+    (u) => {
+      try {
+        new URL(u);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: "url must be an absolute URL including the scheme" }
+  ),
+  selector: z.string().nullish(),
+  filePath: z.string().min(1),
+  componentName: z.string().min(1),
+});
+
 function parseResolverResponse(raw: string): ResolvedComponent {
-  const cleaned = raw.replace(/```json?\s*/g, "").replace(/```\s*/g, "").trim();
-  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
+  const result = resolvedComponentSchema.safeParse(extractJson(raw, "object"));
+  if (!result.success) {
     throw new Error(
-      `AI returned no JSON when resolving component:\n${raw.slice(0, 500)}`
+      `AI returned an invalid component resolution: ${result.error.issues
+        .map((i) => `${i.path.join(".")}: ${i.message}`)
+        .join("; ")}\nRaw response:\n${raw.slice(0, 500)}`
     );
   }
 
-  try {
-    const parsed = JSON.parse(jsonMatch[0]);
-    if (!parsed.url || !parsed.filePath || !parsed.componentName) {
-      throw new Error(
-        `AI response missing required fields. Got: ${JSON.stringify(parsed)}`
-      );
-    }
-    return {
-      url: parsed.url,
-      selector: parsed.selector ?? undefined,
-      filePath: parsed.filePath,
-      componentName: parsed.componentName,
-    };
-  } catch (err) {
-    if (err instanceof SyntaxError) {
-      throw new Error(
-        `AI returned invalid JSON when resolving component:\n${raw.slice(0, 500)}`
-      );
-    }
-    throw err;
-  }
+  return {
+    url: result.data.url,
+    selector: result.data.selector ?? undefined,
+    filePath: result.data.filePath,
+    componentName: result.data.componentName,
+  };
 }

@@ -3,7 +3,8 @@ import { promisify } from "node:util";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import type { Discrepancy } from "./index.js";
+import { parseDiscrepancies, type Discrepancy } from "./index.js";
+import { extractJson } from "./extract-json.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -51,13 +52,5 @@ export async function compareWithOpenAI(
     await rm(dir, { recursive: true, force: true });
   }
 
-  const jsonMatch = text.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) {
-    if (text.includes("[]") || text.toLowerCase().includes("matches")) {
-      return [];
-    }
-    throw new Error(`Could not parse Codex response as JSON:\n${text.slice(0, 500)}`);
-  }
-
-  return JSON.parse(jsonMatch[0]) as Discrepancy[];
+  return parseDiscrepancies(extractJson(text, "array"));
 }
