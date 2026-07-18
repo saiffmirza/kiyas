@@ -96,6 +96,23 @@ const TOKEN_INSTRUCTIONS =
   `     (kiyas only reads your designs — it never modifies your Figma files)\n` +
   `  5. Click ${chalk.bold("Generate token")} and copy it\n`;
 
+/**
+ * Non-interactive token resolution for MCP mode, where there is no
+ * terminal to prompt on — a missing token must fail fast with instructions.
+ */
+export function requireFigmaToken(): string {
+  const existing = resolveFigmaToken();
+  if (existing) return existing;
+
+  throw new Error(
+    "Figma access token not configured. Either:\n" +
+      "1. Set FIGMA_ACCESS_TOKEN in the MCP server config, e.g.:\n" +
+      '   claude mcp add kiyas -e FIGMA_ACCESS_TOKEN=<token> -- npx kiyas-cli mcp\n' +
+      "2. Add { \"figmaAccessToken\": \"<token>\" } to .kiyasrc in the project root or home directory\n" +
+      "3. Skip Figma entirely: export the frame as an image (e.g. via the Figma MCP server's screenshot tool) and pass its path as `designImage` instead of `figma`."
+  );
+}
+
 export async function ensureFigmaToken(): Promise<string> {
   const existing = resolveFigmaToken();
   if (existing) return existing;

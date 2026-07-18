@@ -137,6 +137,38 @@ command = "npx"
 args    = ["kiyas-cli", "mcp"]
 ```
 
+### Figma access for MCP users
+
+The `compare` tool needs Figma access only when you pass a `figma` URL. Three ways to provide it:
+
+**1. Pass your token via the server config** (recommended):
+
+```bash
+claude mcp add kiyas -e FIGMA_ACCESS_TOKEN=<your-token> -- npx kiyas-cli mcp
+```
+
+or in `.mcp.json` / `mcp.json` / `config.toml`, add an `env` block:
+
+```json
+{
+  "mcpServers": {
+    "kiyas": {
+      "command": "npx",
+      "args": ["kiyas-cli", "mcp"],
+      "env": { "FIGMA_ACCESS_TOKEN": "your-token" }
+    }
+  }
+}
+```
+
+**2. A `.kiyasrc` file** in the project root or home directory: `{ "figmaAccessToken": "..." }`
+
+**3. No token at all — pair with the Figma MCP server.** If the agent already has Figma's own MCP server connected, it can export the frame as an image itself and pass the file path as `designImage` instead of a `figma` URL. kiyas never touches the Figma API in this mode:
+
+> Export node 1:234 from the Figma file as a PNG, then use kiyas to compare it against the primary button on the login page.
+
+If a `figma` URL is used with no token configured, the tool fails fast with these instructions rather than hanging.
+
 Once connected, you can ask the agent things like:
 
 > Compare the Figma frame at `<url>` against the primary button on the login page, then list only the high-severity issues.
