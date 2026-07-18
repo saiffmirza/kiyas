@@ -36,7 +36,7 @@ export async function compareWithClaude(
       "--allowedTools",
       "Read",
       "--max-turns",
-      "6",
+      "12",
     ];
     if (modelId) {
       args.push("--model", modelId);
@@ -49,7 +49,16 @@ export async function compareWithClaude(
     });
     // Close stdin so the CLI doesn't wait 3s for piped input
     promise.child.stdin?.end();
-    const { stdout } = await promise;
+
+    let stdout: string;
+    try {
+      ({ stdout } = await promise);
+    } catch (err) {
+      const e = err as Error & { stdout?: string; stderr?: string };
+      throw new Error(
+        `claude CLI failed: ${(e.stdout || e.stderr || e.message).slice(0, 500)}`
+      );
+    }
 
     return parseDiscrepancies(extractJson(stdout, "array"));
   } finally {
