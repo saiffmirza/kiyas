@@ -10,18 +10,18 @@
                 ┌───────────────────┐
                 │   AUTHENTICATE    │
                 │                   │
-                │  macOS Keychain   │
+                │  Verify CLI is    │
+                │  installed and    │
+                │  signed in:       │
                 │  ┌─────────────┐  │
-                │  │ Claude Code │  │──── or ────┐
-                │  │ credentials │  │            │
-                │  └─────────────┘  │    ┌───────┴──────┐
-                │                   │    │ Codex        │
-                │                   │    │ credentials  │
-                └────────┬──────────┘    └───────┬──────┘
-                         │                       │
-                         └───────────┬───────────┘
-                                     │
-                                     ▼
+                │  │ Claude Code │  │
+                │  │  or Codex   │  │
+                │  └─────────────┘  │
+                │  (each handles    │
+                │   its own OAuth)  │
+                └────────┬──────────┘
+                         │
+                         ▼
           ┌──────────────────────────────────────────────────┐
           │                                                  │
           ▼                                                  ▼
@@ -79,19 +79,16 @@
               ┌──────────────────────────┐
               │   VISION AI COMPARISON   │
               │                          │
-              │  1. Encode both PNGs     │
-              │     as base64            │
-              │                          │
-              │  2. Build structured     │
+              │  1. Build structured     │
               │     prompt:              │
               │     "You are a senior    │
               │     UI engineer and      │
               │     design QA            │
               │     specialist..."       │
               │                          │
-              │  3. Send to Claude or    │
-              │     OpenAI Vision API    │
-              │     with both images     │
+              │  2. Spawn claude -p or   │
+              │     codex exec with      │
+              │     both image paths     │
               │                          │
               │  4. Parse JSON response: │
               │     [                    │

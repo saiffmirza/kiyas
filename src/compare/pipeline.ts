@@ -2,7 +2,7 @@ import { copyFile, mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
-import { captureFigma } from "../capture/figma.js";
+import { captureFigma, type FigmaNodeMetadata } from "../capture/figma.js";
 import { capturePlaywright } from "../capture/playwright.js";
 import { generateHtmlReport } from "../report/html.js";
 import { compareImages, type Discrepancy } from "./index.js";
@@ -14,11 +14,13 @@ export interface ProgressEvent {
 }
 
 export interface RunComparisonParams {
-  figmaUrl: string;
+  /** Figma frame URL. Provide either this or `designImage`. */
+  figmaUrl?: string;
+  /** Path to a local design image (e.g. a screenshot). Skips the Figma export. */
+  designImage?: string;
   targetUrl: string;
   model: "claude" | "openai";
-  token: string;
-  figmaToken: string;
+  figmaToken?: string;
   viewport: string;
   selector?: string;
   wait?: number;
@@ -55,7 +57,8 @@ export interface ComparisonResult {
 
 export interface PersistedReport extends ComparisonResult {
   name?: string;
-  figmaUrl: string;
+  figmaUrl?: string;
+  designImage?: string;
   targetUrl: string;
 }
 
@@ -84,10 +87,25 @@ export async function runComparison(
   await mkdir(reportDir, { recursive: true });
 
   try {
-    progress({ step: "figma", status: "start" });
-    const figmaCapture = await captureFigma(params.figmaUrl, params.figmaToken);
-    tempFiles.push(figmaCapture.imagePath);
-    progress({ step: "figma", status: "done" });
+    let designPath: string;
+    let metadata: FigmaNodeMetadata | undefined;
+
+    if (params.designImage) {
+      designPath = resolve(params.designImage);
+      if (!existsSync(designPath)) {
+        throw new Error(`Design image not found: ${designPath}`);
+      }
+    } else {
+      if (!params.figmaUrl || !params.figmaToken) {
+        throw new Error("Provide either `figmaUrl` (with a Figma token) or `designImage`.");
+      }
+      progress({ step: "figma", status: "start" });
+      const figmaCapture = await captureFigma(params.figmaUrl, params.figmaToken);
+      tempFiles.push(figmaCapture.imagePath);
+      designPath = figmaCapture.imagePath;
+      metadata = figmaCapture.metadata;
+      progress({ step: "figma", status: "done" });
+    }
 
     progress({
       step: "screenshot",
@@ -105,17 +123,16 @@ export async function runComparison(
     progress({ step: "screenshot", status: "done" });
 
     const modelLabel =
-      params.model === "claude" ? "Claude Sonnet 4.6" : "GPT-4o";
+      params.model === "claude" ? "Claude Code" : "Codex";
 
     progress({ step: "compare", status: "start", message: modelLabel });
     let discrepancies: Discrepancy[];
     try {
       discrepancies = await compareImages({
-        designPath: figmaCapture.imagePath,
+        designPath,
         implPath,
         provider: params.model,
-        token: params.token,
-        metadata: figmaCapture.metadata,
+        metadata,
       });
       progress({ step: "compare", status: "done", message: modelLabel });
     } catch (err) {
@@ -129,7 +146,7 @@ export async function runComparison(
 
     const designDest = join(reportDir, "design.png");
     const implDest = join(reportDir, "impl.png");
-    await copyFile(figmaCapture.imagePath, designDest);
+    await copyFile(designPath, designDest);
     await copyFile(implPath, implDest);
 
     const reportPath = join(reportDir, "report.html");
@@ -139,7 +156,7 @@ export async function runComparison(
     progress({ step: "report", status: "start" });
     const html = await generateHtmlReport({
       name: params.name,
-      figmaUrl: params.figmaUrl,
+      designSource: params.figmaUrl ?? designPath,
       targetUrl: params.targetUrl,
       model: modelLabel,
       discrepancies,
@@ -169,6 +186,7 @@ export async function runComparison(
       date,
       name: params.name,
       figmaUrl: params.figmaUrl,
+      designImage: params.designImage,
       targetUrl: params.targetUrl,
     };
 
@@ -179,6 +197,7 @@ export async function runComparison(
           reportId,
           name: params.name,
           figmaUrl: params.figmaUrl,
+          designImage: params.designImage,
           targetUrl: params.targetUrl,
           model: modelLabel,
           date,
@@ -202,6 +221,7 @@ export async function runComparison(
                 reportId,
                 name: params.name,
                 figmaUrl: params.figmaUrl,
+                designImage: params.designImage,
                 targetUrl: params.targetUrl,
                 model: modelLabel,
                 date,
@@ -231,7 +251,8 @@ export async function runComparison(
 export interface LoadedReport {
   reportId: string;
   name?: string;
-  figmaUrl: string;
+  figmaUrl?: string;
+  designImage?: string;
   targetUrl: string;
   model: string;
   date: string;
@@ -260,7 +281,8 @@ export async function loadReport(
   const parsed = JSON.parse(raw) as {
     reportId: string;
     name?: string;
-    figmaUrl: string;
+    figmaUrl?: string;
+    designImage?: string;
     targetUrl: string;
     model: string;
     date: string;

@@ -95,6 +95,10 @@ program
 program
   .option("--figma <url>", "Figma frame/component URL")
   .option(
+    "--design <path>",
+    "Path to a design image (e.g. a screenshot) to compare against instead of a Figma URL"
+  )
+  .option(
     "--component <description>",
     'Component to find, e.g. "eventHeader on the redemption screen"'
   )
@@ -137,6 +141,7 @@ program.parse();
 
 interface CLIOptions {
   figma?: string;
+  design?: string;
   component?: string;
   target?: string;
   devServer: string;
@@ -164,12 +169,16 @@ async function run(opts: CLIOptions) {
     return;
   }
 
-  // Validate: need --figma + either --component or --target
-  if (!opts.figma) {
+  // Validate: need a design source (--figma or --design) + either --component or --target
+  if (!opts.figma && !opts.design) {
     throw new Error(
-      "Missing --figma flag.\n" +
-        'Usage: kiyas --figma <figma-url> --component "button on the login page"'
+      "Missing design source. Provide --figma <url> or --design <image-path>.\n" +
+        'Usage: kiyas --figma <figma-url> --component "button on the login page"\n' +
+        '       kiyas --design ./design.png --component "button on the login page"'
     );
+  }
+  if (opts.figma && opts.design) {
+    throw new Error("Provide either --figma or --design, not both.");
   }
 
   if (!opts.component && !opts.target) {
@@ -182,7 +191,7 @@ async function run(opts: CLIOptions) {
     );
   }
 
-  const figmaToken = await ensureFigmaToken();
+  const figmaToken = opts.figma ? await ensureFigmaToken() : undefined;
 
   const auth = await resolveAuth(opts.model);
 
@@ -200,7 +209,6 @@ async function run(opts: CLIOptions) {
       opts.component,
       opts.devServer,
       auth.provider,
-      auth.token,
       process.cwd()
     );
 
@@ -219,9 +227,9 @@ async function run(opts: CLIOptions) {
 
   await runSingleComparison({
     figmaUrl: opts.figma,
+    designImage: opts.design,
     targetUrl: targetUrl!,
     model: auth.provider,
-    token: auth.token,
     figmaToken,
     viewport: opts.viewport,
     selector,
@@ -237,13 +245,16 @@ async function run(opts: CLIOptions) {
 async function runBatchMode(opts: CLIOptions) {
   const config = await loadConfigFile(opts.config!);
   const model = (config.model ?? opts.model) as "claude" | "openai";
-  const figmaToken = config.figmaAccessToken ?? await ensureFigmaToken();
+  const needsFigma = config.comparisons.some((c) => c.figma);
+  const figmaToken = needsFigma
+    ? config.figmaAccessToken ?? (await ensureFigmaToken())
+    : undefined;
 
   const auth = await resolveAuth(model);
 
   for (const comparison of config.comparisons) {
     console.log(
-      chalk.bold(`\n--- ${comparison.name ?? comparison.figma} ---\n`)
+      chalk.bold(`\n--- ${comparison.name ?? comparison.figma ?? comparison.design} ---\n`)
     );
 
     let targetUrl = comparison.target;
@@ -259,7 +270,6 @@ async function runBatchMode(opts: CLIOptions) {
         targetUrl,
         opts.devServer,
         auth.provider,
-        auth.token,
         process.cwd()
       );
 
@@ -272,9 +282,9 @@ async function runBatchMode(opts: CLIOptions) {
 
     await runSingleComparison({
       figmaUrl: comparison.figma,
+      designImage: comparison.design,
       targetUrl,
       model: auth.provider,
-      token: auth.token,
       figmaToken,
       viewport: comparison.viewport ?? config.viewport ?? opts.viewport,
       selector,
@@ -289,11 +299,11 @@ async function runBatchMode(opts: CLIOptions) {
 }
 
 interface ComparisonParams {
-  figmaUrl: string;
+  figmaUrl?: string;
+  designImage?: string;
   targetUrl: string;
   model: "claude" | "openai";
-  token: string;
-  figmaToken: string;
+  figmaToken?: string;
   viewport: string;
   selector?: string;
   wait?: number;

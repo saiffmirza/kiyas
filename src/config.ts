@@ -7,7 +7,8 @@ import { ask } from "./utils/prompt.js";
 
 export interface ComparisonConfig {
   name?: string;
-  figma: string;
+  figma?: string;
+  design?: string; // path to a local design image, alternative to figma
   target: string; // URL or component description (e.g. "eventHeader on redemption screen")
   selector?: string;
   viewport?: string;
@@ -34,9 +35,9 @@ export async function loadConfigFile(path: string): Promise<KiyasConfig> {
   }
 
   for (const c of config.comparisons) {
-    if (!c.figma || !c.target) {
+    if ((!c.figma && !c.design) || !c.target) {
       throw new Error(
-        `Each comparison must have 'figma' and 'target'. Invalid: ${JSON.stringify(c)}`
+        `Each comparison must have 'target' and either 'figma' or 'design'. Invalid: ${JSON.stringify(c)}`
       );
     }
   }

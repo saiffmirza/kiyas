@@ -1,76 +1,63 @@
-import { readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import type { Discrepancy } from "./index.js";
+
+const execFileAsync = promisify(execFile);
 
 export async function compareWithOpenAI(
   designPath: string,
   implPath: string,
-  prompt: string,
-  token: string
+  prompt: string
 ): Promise<Discrepancy[]> {
-  const [designBuf, implBuf] = await Promise.all([
-    readFile(designPath),
-    readFile(implPath),
-  ]);
+  const absDesign = resolve(designPath);
+  const absImpl = resolve(implPath);
 
-  const designBase64 = designBuf.toString("base64");
-  const implBase64 = implBuf.toString("base64");
+  const fullPrompt = [
+    "The first attached image is the Figma design (expected state).",
+    "The second attached image is the implementation screenshot (actual state).",
+    prompt,
+  ].join("\n\n");
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      max_tokens: 4096,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/png;base64,${designBase64}`,
-              },
-            },
-            {
-              type: "text",
-              text: "This is the Figma design (expected state).",
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/png;base64,${implBase64}`,
-              },
-            },
-            {
-              type: "text",
-              text: "This is the implementation screenshot (actual state).",
-            },
-            {
-              type: "text",
-              text: prompt,
-            },
-          ],
-        },
+  const dir = await mkdtemp(join(tmpdir(), "kiyas-compare-"));
+  const outFile = join(dir, "last-message.txt");
+
+  let text: string;
+  try {
+    await execFileAsync(
+      "codex",
+      [
+        "exec",
+        "--sandbox",
+        "read-only",
+        "--skip-git-repo-check",
+        "--image",
+        absDesign,
+        "--image",
+        absImpl,
+        "--output-last-message",
+        outFile,
+        fullPrompt,
       ],
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`OpenAI API error (${res.status}): ${body}`);
+      {
+        timeout: 120_000,
+        maxBuffer: 10 * 1024 * 1024,
+      }
+    );
+    text = (await readFile(outFile, "utf-8")).trim();
+  } finally {
+    await rm(dir, { recursive: true, force: true });
   }
 
-  const data = (await res.json()) as {
-    choices: Array<{ message: { content: string } }>;
-  };
-
-  const content = data.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error("OpenAI returned no response");
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) {
+    if (text.includes("[]") || text.toLowerCase().includes("matches")) {
+      return [];
+    }
+    throw new Error(`Could not parse Codex response as JSON:\n${text.slice(0, 500)}`);
   }
 
-  return JSON.parse(content) as Discrepancy[];
+  return JSON.parse(jsonMatch[0]) as Discrepancy[];
 }

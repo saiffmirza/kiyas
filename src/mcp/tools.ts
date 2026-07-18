@@ -11,7 +11,19 @@ import {
 import { loadSettings } from "../settings.js";
 
 export const compareInputSchema = z.object({
-  figma: z.string().url().describe("Figma frame/component URL"),
+  figma: z
+    .string()
+    .url()
+    .optional()
+    .describe(
+      "Figma frame/component URL. Provide either `figma` OR `designImage`."
+    ),
+  designImage: z
+    .string()
+    .optional()
+    .describe(
+      "Path to a local design image (e.g. a screenshot) to compare against, instead of a Figma URL."
+    ),
   target: z
     .string()
     .url()
@@ -96,6 +108,11 @@ export const listIssuesInputSchema = z.object({
 export type ListIssuesInput = z.infer<typeof listIssuesInputSchema>;
 
 export async function handleCompare(input: CompareInput) {
+  if (!input.figma && !input.designImage) {
+    throw new Error(
+      "Provide either `figma` (a Figma URL) or `designImage` (a local image path)."
+    );
+  }
   if (!input.target && !input.component) {
     throw new Error(
       "Provide either `target` (a URL) or `component` (a natural-language description)."
@@ -112,7 +129,7 @@ export async function handleCompare(input: CompareInput) {
   const viewport = input.viewport ?? settings.viewport ?? "1280x720";
   const threshold = input.threshold ?? settings.threshold ?? "all";
 
-  const figmaToken = await ensureFigmaToken();
+  const figmaToken = input.figma ? await ensureFigmaToken() : undefined;
   const auth = await resolveAuth(model);
 
   let targetUrl = input.target;
@@ -124,7 +141,6 @@ export async function handleCompare(input: CompareInput) {
       input.component,
       devServer,
       auth.provider,
-      auth.token,
       process.cwd()
     );
     targetUrl = resolved.url;
@@ -134,9 +150,9 @@ export async function handleCompare(input: CompareInput) {
 
   const result = await runComparison({
     figmaUrl: input.figma,
+    designImage: input.designImage,
     targetUrl: targetUrl!,
     model: auth.provider,
-    token: auth.token,
     figmaToken,
     viewport,
     selector,

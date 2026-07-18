@@ -8,8 +8,7 @@ const execFileAsync = promisify(execFile);
 export async function compareWithClaude(
   designPath: string,
   implPath: string,
-  prompt: string,
-  _token: string
+  prompt: string
 ): Promise<Discrepancy[]> {
   const absDesign = resolve(designPath);
   const absImpl = resolve(implPath);

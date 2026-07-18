@@ -28,7 +28,8 @@ async function getLogoBase64(): Promise<string> {
 
 export interface HtmlReportOptions {
   name?: string;
-  figmaUrl: string;
+  /** Figma URL or local design-image path. */
+  designSource: string;
   targetUrl: string;
   model: string;
   discrepancies: Discrepancy[];
@@ -40,7 +41,10 @@ export interface HtmlReportOptions {
 export async function generateHtmlReport(
   options: HtmlReportOptions
 ): Promise<string> {
-  const { name, figmaUrl, targetUrl, model, threshold } = options;
+  const { name, designSource, targetUrl, model, threshold } = options;
+  const designIsUrl = designSource.startsWith("http");
+  const designLabel =
+    designSource.length > 60 ? designSource.slice(0, 57) + "..." : designSource;
   let discrepancies = options.discrepancies;
 
   if (threshold === "high") {
@@ -433,8 +437,12 @@ export async function generateHtmlReport(
 
     <div class="meta">
       <div class="meta-item">
-        <div class="label">Figma Source</div>
-        <div class="value"><a href="${esc(figmaUrl)}" target="_blank">${esc(figmaUrl.length > 60 ? figmaUrl.slice(0, 57) + "..." : figmaUrl)}</a></div>
+        <div class="label">Design Source</div>
+        <div class="value">${
+          designIsUrl
+            ? `<a href="${esc(designSource)}" target="_blank">${esc(designLabel)}</a>`
+            : esc(designLabel)
+        }</div>
       </div>
       <div class="meta-item">
         <div class="label">Target</div>

@@ -32,7 +32,7 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
                           └──────────┬───────────┘
                                      │
                       ┌──────────────┼──────────────┐
-                      ▼              ▼               ▼How
+                      ▼              ▼               ▼
               ┌──────────────┐ ┌───────────┐ ┌─────────────┐
               │ 1. Auth      │ │ 2. Figma  │ │ 3. Resolve  │
               │              │ │  Capture  │ │  Component  │
@@ -95,7 +95,7 @@ kiyas exposes its comparison engine as an [MCP](https://modelcontextprotocol.io)
 
 | Tool              | Description                                                                 | Required input                |
 | ----------------- | --------------------------------------------------------------------------- | ----------------------------- |
-| `compare`         | Run a fresh Figma-vs-implementation comparison; returns `reportId` + summary | `figma` + (`target` or `component`) |
+| `compare`         | Run a fresh design-vs-implementation comparison; returns `reportId` + summary | (`figma` or `designImage`) + (`target` or `component`) |
 | `get_diff_report` | Fetch a stored report's HTML or JSON content                                | `reportId`                    |
 | `list_issues`     | List discrepancies from a stored report, optionally filtered by severity    | `reportId`                    |
 
@@ -151,7 +151,7 @@ The agent will call `compare` to produce a `reportId`, then `list_issues` with `
 
 - Node.js 20+
 - [Claude Code](https://claude.ai/code) installed and signed in (Pro, Max, or Team subscription), or [Codex](https://platform.openai.com/docs/guides/codex) for OpenAI
-- A Figma personal access token ([generate one here](https://www.figma.com/developers/api#access-tokens))
+- A Figma personal access token ([generate one here](https://www.figma.com/developers/api#access-tokens)) — only needed for `--figma`; comparing against a local screenshot with `--design` requires no token
 
 ### Install
 
@@ -192,6 +192,11 @@ kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
   --component "primary button" \
   --format json
 
+# Compare against a design screenshot instead of Figma (no Figma token needed)
+kiyas --design ./design.png \
+  --component "primary button" \
+  --output report.html
+
 # Use OpenAI instead of Claude
 kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
   --component "nav bar" \
@@ -204,7 +209,8 @@ kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
 
 | Flag                        | Description                                                   | Required |
 | --------------------------- | ------------------------------------------------------------- | -------- |
-| `--figma <url>`             | Figma frame/component URL                                     | Yes      |
+| `--figma <url>`             | Figma frame/component URL                                     | Yes\*\*  |
+| `--design <path>`           | Local design image (e.g. a screenshot) instead of Figma       | Yes\*\*  |
 | `--component <description>` | Natural-language description of the component to find         | Yes\*    |
 | `--target <url>`            | Direct URL of the rendered component (skips AI lookup)        | Yes\*    |
 | `--dev-server <url>`        | Dev server base URL (default: `http://localhost:3000`)        | No       |
@@ -219,6 +225,8 @@ kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
 | `--threshold <level>`       | Severity filter: `all`, `medium`, `high` (default: `all`)     | No       |
 
 _\*Provide either `--component` or `--target`. When using `--component`, kiyas uses AI to find the component in your codebase and resolve it to a URL._
+
+_\*\*Provide either `--figma` or `--design`. With `--design`, the Figma export is skipped entirely and no Figma token is required._
 
 ---
 
@@ -308,7 +316,7 @@ For teams running repeated comparisons, create a `kiyas.config.json`:
 }
 ```
 
-The `target` field accepts both component descriptions (resolved by AI) and direct URLs. Run with:
+The `target` field accepts both component descriptions (resolved by AI) and direct URLs. Each comparison takes either `figma` (a URL) or `design` (a local image path) as its design source. Run with:
 
 ```bash
 kiyas --config ./kiyas.config.json

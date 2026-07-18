@@ -4,7 +4,6 @@ import { resolveOpenAIAuth } from "./openai-auth.js";
 
 export interface AuthResult {
   provider: "claude" | "openai";
-  token: string;
 }
 
 export async function resolveAuth(
@@ -12,7 +11,7 @@ export async function resolveAuth(
 ): Promise<AuthResult> {
   if (preferredModel === "claude") {
     const available = await resolveClaudeAuth();
-    if (available) return { provider: "claude", token: "cli" };
+    if (available) return { provider: "claude" };
 
     throw new Error(
       `\n${chalk.bold("Claude Code is not installed or not signed in.")}\n\n` +
@@ -26,8 +25,8 @@ export async function resolveAuth(
         `     (requires signing into Codex: ${chalk.cyan("codex auth login")})`
     );
   } else {
-    const token = await resolveOpenAIAuth();
-    if (token) return { provider: "openai", token };
+    const available = await resolveOpenAIAuth();
+    if (available) return { provider: "openai" };
 
     throw new Error(
       `\n${chalk.bold("No Codex session found.")}\n\n` +

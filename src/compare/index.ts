@@ -15,7 +15,6 @@ export interface CompareOptions {
   designPath: string;
   implPath: string;
   provider: "claude" | "openai";
-  token: string;
   metadata?: FigmaNodeMetadata;
 }
 
@@ -25,18 +24,8 @@ export async function compareImages(
   const prompt = buildComparisonPrompt(options.metadata);
 
   if (options.provider === "claude") {
-    return compareWithClaude(
-      options.designPath,
-      options.implPath,
-      prompt,
-      options.token
-    );
+    return compareWithClaude(options.designPath, options.implPath, prompt);
   } else {
-    return compareWithOpenAI(
-      options.designPath,
-      options.implPath,
-      prompt,
-      options.token
-    );
+    return compareWithOpenAI(options.designPath, options.implPath, prompt);
   }
 }

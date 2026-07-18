@@ -90,7 +90,7 @@ export async function runSetup() {
   );
 
   const hasClaudeCode = await resolveClaudeAuth();
-  const hasCodex = !!(await resolveOpenAIAuth());
+  const hasCodex = await resolveOpenAIAuth();
 
   if (hasClaudeCode && hasCodex) {
     log.success("Both Claude Code and Codex detected");
