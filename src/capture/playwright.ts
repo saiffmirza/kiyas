@@ -7,6 +7,10 @@ export interface PlaywrightCaptureOptions {
   viewport?: string;
   selector?: string;
   wait?: number;
+  /** Device scale factor for the screenshot. Match this to the Figma export scale. */
+  scale?: number;
+  /** Capture the full scrollable page instead of just the viewport. Default true when no selector is given. */
+  fullPage?: boolean;
   /**
    * Path to a Playwright storageState JSON file (cookies + localStorage).
    * Lets kiyas screenshot authenticated views the same way your tests do.
@@ -38,17 +42,31 @@ export async function capturePlaywright(
 
     const context = await browser.newContext({
       viewport: { width, height },
+      deviceScaleFactor: options.scale ?? 1,
+      reducedMotion: "reduce",
+      timezoneId: "UTC",
+      locale: "en-US",
       storageState,
     });
     const page = await context.newPage();
 
-    await page.goto(options.url, { waitUntil: "networkidle" });
+    await page.goto(options.url, { waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready);
+    await page.addStyleTag({
+      content:
+        "*, *::before, *::after { animation: none !important; transition: none !important; }",
+    });
 
     if (options.wait) {
       await page.waitForTimeout(options.wait);
     }
 
     const imagePath = join(tmpdir(), `kiyas-target-${Date.now()}.png`);
+    const screenshotOptions = {
+      path: imagePath,
+      animations: "disabled",
+      caret: "hide",
+    } as const;
 
     if (options.selector) {
       const element = await page.$(options.selector);
@@ -57,9 +75,12 @@ export async function capturePlaywright(
           `Selector "${options.selector}" not found on page ${options.url}`
         );
       }
-      await element.screenshot({ path: imagePath });
+      await element.screenshot(screenshotOptions);
     } else {
-      await page.screenshot({ path: imagePath });
+      await page.screenshot({
+        ...screenshotOptions,
+        fullPage: options.fullPage ?? true,
+      });
     }
 
     return imagePath;

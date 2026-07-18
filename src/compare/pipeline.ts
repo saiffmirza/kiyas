@@ -24,6 +24,10 @@ export interface RunComparisonParams {
   viewport: string;
   selector?: string;
   wait?: number;
+  /** Export/render scale applied to BOTH the Figma export and the screenshot. Default 1. */
+  scale?: number;
+  /** Full-page screenshot when no selector (default true). */
+  fullPage?: boolean;
   authState?: string;
   threshold: "all" | "medium" | "high";
   format: "html" | "json";
@@ -100,7 +104,11 @@ export async function runComparison(
         throw new Error("Provide either `figmaUrl` (with a Figma token) or `designImage`.");
       }
       progress({ step: "figma", status: "start" });
-      const figmaCapture = await captureFigma(params.figmaUrl, params.figmaToken);
+      const figmaCapture = await captureFigma(
+        params.figmaUrl,
+        params.figmaToken,
+        params.scale ?? 1
+      );
       tempFiles.push(figmaCapture.imagePath);
       designPath = figmaCapture.imagePath;
       metadata = figmaCapture.metadata;
@@ -117,6 +125,8 @@ export async function runComparison(
       viewport: params.viewport,
       selector: params.selector,
       wait: params.wait,
+      scale: params.scale ?? 1,
+      fullPage: params.fullPage,
       authState: params.authState,
     });
     tempFiles.push(implPath);

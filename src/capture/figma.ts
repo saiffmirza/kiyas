@@ -29,12 +29,13 @@ export interface FigmaNodeMetadata {
 
 export async function captureFigma(
   figmaUrl: string,
-  figmaToken: string
+  figmaToken: string,
+  scale = 1
 ): Promise<FigmaCapture> {
   const { fileKey, nodeId } = parseFigmaUrl(figmaUrl);
 
   // Export the node as PNG
-  const imageUrl = await exportFigmaImage(fileKey, nodeId, figmaToken);
+  const imageUrl = await exportFigmaImage(fileKey, nodeId, figmaToken, scale);
   const imagePath = join(tmpdir(), `kiyas-figma-${Date.now()}.png`);
   await downloadImage(imageUrl, imagePath);
 
@@ -52,9 +53,10 @@ export async function captureFigma(
 async function exportFigmaImage(
   fileKey: string,
   nodeId: string,
-  token: string
+  token: string,
+  scale: number
 ): Promise<string> {
-  const url = `${FIGMA_API_BASE}/v1/images/${fileKey}?ids=${encodeURIComponent(nodeId)}&format=png&scale=2`;
+  const url = `${FIGMA_API_BASE}/v1/images/${fileKey}?ids=${encodeURIComponent(nodeId)}&format=png&scale=${scale}`;
 
   const res = await fetch(url, {
     headers: { "X-Figma-Token": token },

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { resolveAuth } from "../auth/index.js";
-import { ensureFigmaToken } from "../config.js";
+import { requireFigmaToken } from "../config.js";
 import { resolveComponent } from "../resolve/component.js";
 import {
   defaultReportsDir,
@@ -22,7 +22,8 @@ export const compareInputSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Path to a local design image (e.g. a screenshot) to compare against, instead of a Figma URL."
+      "Path to a local design image (e.g. a screenshot) to compare against, instead of a Figma URL. " +
+        "Useful when no Figma token is configured — e.g. export the frame with the Figma MCP server's screenshot tool and pass the file path here."
     ),
   target: z
     .string()
@@ -51,6 +52,19 @@ export const compareInputSchema = z.object({
     .regex(/^\d+x\d+$/)
     .optional()
     .describe("Viewport for the screenshot, format WIDTHxHEIGHT (default: 1280x720)"),
+  scale: z
+    .number()
+    .positive()
+    .optional()
+    .describe(
+      "Render scale applied to both the Figma export and the screenshot (default: 1)"
+    ),
+  fullPage: z
+    .boolean()
+    .optional()
+    .describe(
+      "Capture the full scrollable page when no selector is given (default: true)"
+    ),
   selector: z
     .string()
     .optional()
@@ -129,7 +143,7 @@ export async function handleCompare(input: CompareInput) {
   const viewport = input.viewport ?? settings.viewport ?? "1280x720";
   const threshold = input.threshold ?? settings.threshold ?? "all";
 
-  const figmaToken = input.figma ? await ensureFigmaToken() : undefined;
+  const figmaToken = input.figma ? requireFigmaToken() : undefined;
   const auth = await resolveAuth(model);
 
   let targetUrl = input.target;
@@ -155,6 +169,8 @@ export async function handleCompare(input: CompareInput) {
     model: auth.provider,
     figmaToken,
     viewport,
+    scale: input.scale,
+    fullPage: input.fullPage,
     selector,
     wait: input.wait,
     authState: input.authState,

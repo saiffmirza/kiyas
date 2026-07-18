@@ -1,9 +1,23 @@
 import type { FigmaNodeMetadata } from "../capture/figma.js";
+import type { PngSize } from "../utils/png-size.js";
 
-export function buildComparisonPrompt(metadata?: FigmaNodeMetadata): string {
+export interface ImageDimensions {
+  design?: PngSize;
+  impl?: PngSize;
+}
+
+export function buildComparisonPrompt(
+  metadata?: FigmaNodeMetadata,
+  dimensions?: ImageDimensions
+): string {
   let metadataContext = "";
   if (metadata) {
     metadataContext = `\n\nAdditional Figma node metadata (use to validate your observations):\n${JSON.stringify(metadata, null, 2)}\n`;
+  }
+
+  let scaleContext = "";
+  if (dimensions?.design && dimensions?.impl) {
+    scaleContext = `\n\nImage dimensions: the design image is ${dimensions.design.width}x${dimensions.design.height}px, the implementation screenshot is ${dimensions.impl.width}x${dimensions.impl.height}px. The images may be rendered at different scales — compare proportions, ratios, and relative values rather than absolute pixel measurements.\n`;
   }
 
   return `You are a senior UI engineer and design QA specialist. You are comparing a Figma design (the "expected" state) against a live implementation screenshot (the "actual" state).
@@ -20,7 +34,7 @@ Also note:
 - Any elements present in the design but missing from the implementation
 - Any elements present in the implementation but not in the design
 - Overall layout/alignment differences
-${metadataContext}
+${metadataContext}${scaleContext}
 Format your response as a JSON array of objects with the fields: element, property, expected, actual, severity.
 
 If the implementation matches the design perfectly, return exactly [].

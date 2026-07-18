@@ -4,6 +4,7 @@ import { buildComparisonPrompt } from "./prompt.js";
 import { compareWithClaude } from "./claude.js";
 import { compareWithOpenAI } from "./openai.js";
 import { log } from "../utils/logger.js";
+import { readPngSize } from "../utils/png-size.js";
 
 export interface Discrepancy {
   element: string;
@@ -69,7 +70,14 @@ export interface CompareOptions {
 export async function compareImages(
   options: CompareOptions
 ): Promise<Discrepancy[]> {
-  const prompt = buildComparisonPrompt(options.metadata);
+  const [designSize, implSize] = await Promise.all([
+    readPngSize(options.designPath).catch(() => undefined),
+    readPngSize(options.implPath).catch(() => undefined),
+  ]);
+  const prompt = buildComparisonPrompt(options.metadata, {
+    design: designSize,
+    impl: implSize,
+  });
 
   if (options.provider === "claude") {
     return compareWithClaude(options.designPath, options.implPath, prompt);

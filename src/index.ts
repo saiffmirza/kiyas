@@ -118,6 +118,16 @@ program
   )
   .option("--output <path>", "Path to save the report (default: kiyas-report-<timestamp>.html)")
   .option("--viewport <size>", "Viewport size for screenshot", settings.viewport ?? "1280x720")
+  .option(
+    "--scale <n>",
+    "Render scale applied to both the Figma export and the screenshot",
+    parseFloat,
+    1
+  )
+  .option(
+    "--no-full-page",
+    "Capture only the viewport instead of the full scrollable page"
+  )
   .option("--selector <css>", "CSS selector to screenshot a specific element")
   .option("--wait <ms>", "Time in ms to wait before screenshot", parseInt)
   .option(
@@ -148,6 +158,8 @@ interface CLIOptions {
   model: "claude" | "openai";
   output?: string;
   viewport: string;
+  scale: number;
+  fullPage: boolean;
   selector?: string;
   wait?: number;
   authState?: string;
@@ -232,6 +244,8 @@ async function run(opts: CLIOptions) {
     model: auth.provider,
     figmaToken,
     viewport: opts.viewport,
+    scale: opts.scale,
+    fullPage: opts.fullPage,
     selector,
     wait: opts.wait,
     authState: opts.authState,
@@ -287,6 +301,8 @@ async function runBatchMode(opts: CLIOptions) {
       model: auth.provider,
       figmaToken,
       viewport: comparison.viewport ?? config.viewport ?? opts.viewport,
+      scale: opts.scale,
+      fullPage: opts.fullPage,
       selector,
       wait: comparison.wait ?? opts.wait,
       authState: comparison.authState ?? config.authState ?? opts.authState,
@@ -305,6 +321,8 @@ interface ComparisonParams {
   model: "claude" | "openai";
   figmaToken?: string;
   viewport: string;
+  scale?: number;
+  fullPage?: boolean;
   selector?: string;
   wait?: number;
   authState?: string;
