@@ -334,6 +334,8 @@ kiyas is a harness around vision AI, and a harness is only useful if its results
 - **Frozen capture environment** — animations and transitions disabled, fonts awaited, UTC timezone, fixed locale, full-page screenshots, and the Figma export scale always matches the screenshot's device scale factor.
 - **Validated output** — model responses are schema-validated (malformed findings are dropped with a warning; a majority-invalid response fails the run instead of producing a quietly wrong report).
 - **Run manifest** — every report's JSON records the viewport, scale, threshold, pinned model, CLI version, prompt version hash, and how a `--component` description was resolved, so any two reports can be meaningfully compared.
+- **Multi-run voting** — `--runs 3` runs the comparison three times concurrently and keeps only majority-vote findings, each tagged with a confidence score. Higher consistency at N× cost; off by default.
+- **Measured, not vibed** — `npm run eval` (repo only, not shipped) runs a golden eval set: fixture pages with known injected CSS mutations plus zero-mutation pairs, scored deterministically for recall, precision, severity agreement, false-positive floor, and run-to-run stability. Prompt and pipeline changes are validated against it.
 
 ---
 
