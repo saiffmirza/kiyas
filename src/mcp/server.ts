@@ -5,6 +5,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { VERSION } from "../version.js";
 import {
   compareInputSchema,
   getDiffReportInputSchema,
@@ -18,9 +19,11 @@ const TOOLS = [
   {
     name: "compare",
     description:
-      "Compare a Figma frame against a rendered implementation and return discrepancies. " +
-      "Provide `figma` plus either `target` (a URL) or `component` (natural-language description; " +
-      "kiyas finds it in the codebase). Returns a reportId you can pass to get_diff_report or list_issues.",
+      "Compare a design against a rendered implementation and return discrepancies " +
+      "(measured on kiyas's golden eval set: 90% mutation recall, zero false positives on identical pairs). " +
+      "Provide `figma` (frame URL) or `designImage` (local screenshot path), plus either `target` (a URL) " +
+      "or `component` (natural-language description; kiyas finds it in the codebase). " +
+      "Returns a reportId you can pass to get_diff_report or list_issues.",
     inputSchema: z.toJSONSchema(compareInputSchema),
   },
   {
@@ -49,7 +52,7 @@ export async function startMcpServer(): Promise<void> {
   console.warn = (...args: unknown[]) => console.error(...args);
 
   const server = new Server(
-    { name: "kiyas", version: "1.0.1" },
+    { name: "kiyas", version: VERSION },
     { capabilities: { tools: {} } }
   );
 

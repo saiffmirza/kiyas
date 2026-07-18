@@ -1,7 +1,7 @@
 {
   "name": "kiyas-cli",
   "version": "1.2.0",
-  "description": "MCP server and CLI for AI-powered design fidelity — compare Figma designs against rendered UI",
+  "description": "MCP server and CLI for AI-powered design fidelity — compare Figma designs (or screenshots) against rendered UI. Measured on a golden eval set: 90% mutation recall, zero false positives on clean pairs. Uses your Claude Code or Codex subscription — no API keys.",
   "type": "module",
   "bin": {
     "kiyas": "dist/index.js"

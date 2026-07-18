@@ -10,6 +10,7 @@ import { runComparison, type ProgressEvent } from "./compare/pipeline.js";
 import { loadSettings, saveSetting, getAllSettings } from "./settings.js";
 import { log } from "./utils/logger.js";
 import { runSetup } from "./setup.js";
+import { VERSION } from "./version.js";
 
 const settings = loadSettings();
 const program = new Command();
@@ -19,7 +20,7 @@ program
   .description(
     "AI-powered design fidelity CLI — compare Figma designs against rendered UI"
   )
-  .version("1.2.0");
+  .version(VERSION);
 
 // --- subcommands ---
 program
