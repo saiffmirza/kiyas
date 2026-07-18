@@ -23,14 +23,15 @@ export async function resolveComponent(
   description: string,
   devServerUrl: string,
   provider: "claude" | "openai",
-  cwd: string
+  cwd: string,
+  modelId?: string
 ): Promise<ResolvedComponent> {
   const prompt = buildResolverPrompt(description, devServerUrl);
 
   const raw =
     provider === "claude"
-      ? await resolveWithClaude(prompt, cwd)
-      : await resolveWithCodex(prompt, cwd);
+      ? await resolveWithClaude(prompt, cwd, modelId)
+      : await resolveWithCodex(prompt, cwd, modelId);
 
   return parseResolverResponse(raw);
 }
@@ -63,47 +64,61 @@ Respond ONLY with valid JSON (no markdown fences, no commentary):
 }`;
 }
 
-async function resolveWithClaude(prompt: string, cwd: string): Promise<string> {
-  const { stdout } = await execFileAsync(
-    "claude",
-    [
-      "-p",
-      prompt,
-      "--output-format",
-      "text",
-      "--allowedTools",
-      "Read",
-      "Glob",
-      "Grep",
-      "--max-turns",
-      "30",
-    ],
-    {
-      cwd,
-      timeout: 180_000,
-      maxBuffer: 10 * 1024 * 1024,
-    }
-  );
+async function resolveWithClaude(
+  prompt: string,
+  cwd: string,
+  modelId?: string
+): Promise<string> {
+  const args = [
+    "-p",
+    prompt,
+    "--output-format",
+    "text",
+    "--allowedTools",
+    "Read",
+    "Glob",
+    "Grep",
+    "--max-turns",
+    "30",
+  ];
+  if (modelId) {
+    args.push("--model", modelId);
+  }
+
+  const { stdout } = await execFileAsync("claude", args, {
+    cwd,
+    timeout: 180_000,
+    maxBuffer: 10 * 1024 * 1024,
+  });
 
   return stdout;
 }
 
-async function resolveWithCodex(prompt: string, cwd: string): Promise<string> {
+async function resolveWithCodex(
+  prompt: string,
+  cwd: string,
+  modelId?: string
+): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "kiyas-resolve-"));
   const outFile = join(dir, "last-message.txt");
+
+  const args = [
+    "exec",
+    "--sandbox",
+    "read-only",
+    "--skip-git-repo-check",
+    "--output-last-message",
+    outFile,
+  ];
+  if (modelId) {
+    args.push("-m", modelId);
+  }
+  args.push(prompt);
 
   try {
     await execFileAsync(
       "codex",
-      [
-        "exec",
-        "--sandbox",
-        "read-only",
-        "--skip-git-repo-check",
-        "--output-last-message",
-        outFile,
-        prompt,
-      ],
+      args,
       {
         cwd,
         timeout: 180_000,

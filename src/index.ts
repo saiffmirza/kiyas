@@ -206,11 +206,15 @@ async function run(opts: CLIOptions) {
   const figmaToken = opts.figma ? await ensureFigmaToken() : undefined;
 
   const auth = await resolveAuth(opts.model);
+  const aiModel = pinnedModel(auth.provider);
 
   // If --component is provided, use AI to resolve it to a URL + selector
   let targetUrl = opts.target;
   let selector = opts.selector;
   let componentName = opts.component;
+  let resolvedInfo:
+    | { filePath: string; url: string; selector?: string }
+    | undefined;
 
   if (opts.component && !opts.target) {
     const resolveSpinner = ora(
@@ -221,7 +225,8 @@ async function run(opts: CLIOptions) {
       opts.component,
       opts.devServer,
       auth.provider,
-      process.cwd()
+      process.cwd(),
+      aiModel
     );
 
     resolveSpinner.succeed(
@@ -235,11 +240,18 @@ async function run(opts: CLIOptions) {
     targetUrl = resolved.url;
     selector = resolved.selector ?? selector;
     componentName = resolved.componentName;
+    resolvedInfo = {
+      filePath: resolved.filePath,
+      url: resolved.url,
+      selector: resolved.selector,
+    };
   }
 
   await runSingleComparison({
     figmaUrl: opts.figma,
     designImage: opts.design,
+    aiModel,
+    resolved: resolvedInfo,
     targetUrl: targetUrl!,
     model: auth.provider,
     figmaToken,
@@ -265,6 +277,7 @@ async function runBatchMode(opts: CLIOptions) {
     : undefined;
 
   const auth = await resolveAuth(model);
+  const aiModel = pinnedModel(auth.provider);
 
   for (const comparison of config.comparisons) {
     console.log(
@@ -273,6 +286,9 @@ async function runBatchMode(opts: CLIOptions) {
 
     let targetUrl = comparison.target;
     let selector = comparison.selector;
+    let resolvedInfo:
+      | { filePath: string; url: string; selector?: string }
+      | undefined;
 
     // If target looks like a component description (not a URL), resolve it
     if (targetUrl && !targetUrl.startsWith("http")) {
@@ -284,7 +300,8 @@ async function runBatchMode(opts: CLIOptions) {
         targetUrl,
         opts.devServer,
         auth.provider,
-        process.cwd()
+        process.cwd(),
+        aiModel
       );
 
       resolveSpinner.succeed(
@@ -292,11 +309,18 @@ async function runBatchMode(opts: CLIOptions) {
       );
       targetUrl = resolved.url;
       selector = resolved.selector ?? selector;
+      resolvedInfo = {
+        filePath: resolved.filePath,
+        url: resolved.url,
+        selector: resolved.selector,
+      };
     }
 
     await runSingleComparison({
       figmaUrl: comparison.figma,
       designImage: comparison.design,
+      aiModel,
+      resolved: resolvedInfo,
       targetUrl,
       model: auth.provider,
       figmaToken,
@@ -314,11 +338,19 @@ async function runBatchMode(opts: CLIOptions) {
   }
 }
 
+function pinnedModel(provider: "claude" | "openai"): string | undefined {
+  return provider === "claude"
+    ? settings.claudeModel ?? "sonnet"
+    : settings.codexModel;
+}
+
 interface ComparisonParams {
   figmaUrl?: string;
   designImage?: string;
   targetUrl: string;
   model: "claude" | "openai";
+  aiModel?: string;
+  resolved?: { filePath: string; url: string; selector?: string };
   figmaToken?: string;
   viewport: string;
   scale?: number;
@@ -365,6 +397,11 @@ async function runSingleComparison(params: ComparisonParams) {
             .join(", ")})`
         : "")
   );
+  if (params.threshold !== "all" && summary.aboveThreshold < summary.total) {
+    log.dim(
+      `  ${summary.aboveThreshold} at or above the "${params.threshold}" threshold shown in the report`
+    );
+  }
 
   const finalPath = params.output ? resolve(params.output) : result.reportPath;
   console.log("");

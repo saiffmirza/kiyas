@@ -64,6 +64,8 @@ export interface CompareOptions {
   designPath: string;
   implPath: string;
   provider: "claude" | "openai";
+  /** Model ID/alias to pin the CLI to (claude --model / codex -m). */
+  modelId?: string;
   metadata?: FigmaNodeMetadata;
 }
 
@@ -80,8 +82,18 @@ export async function compareImages(
   });
 
   if (options.provider === "claude") {
-    return compareWithClaude(options.designPath, options.implPath, prompt);
+    return compareWithClaude(
+      options.designPath,
+      options.implPath,
+      prompt,
+      options.modelId
+    );
   } else {
-    return compareWithOpenAI(options.designPath, options.implPath, prompt);
+    return compareWithOpenAI(
+      options.designPath,
+      options.implPath,
+      prompt,
+      options.modelId
+    );
   }
 }

@@ -4,7 +4,7 @@
   "description": "MCP server and CLI for AI-powered design fidelity — compare Figma designs against rendered UI",
   "type": "module",
   "bin": {
-    "kiyas": "./dist/index.js"
+    "kiyas": "dist/index.js"
   },
   "scripts": {
     "build": "tsup",

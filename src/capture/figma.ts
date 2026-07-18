@@ -11,20 +11,27 @@ export interface FigmaCapture {
   metadata?: FigmaNodeMetadata;
 }
 
+interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface FigmaNodeMetadata {
   name: string;
   type: string;
-  absoluteBoundingBox?: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
+  absoluteBoundingBox?: BoundingBox;
   fills?: unknown[];
   strokes?: unknown[];
   effects?: unknown[];
   cornerRadius?: number;
   style?: Record<string, unknown>;
+  children?: Array<{
+    name: string;
+    type: string;
+    absoluteBoundingBox?: BoundingBox;
+  }>;
 }
 
 export async function captureFigma(
@@ -103,10 +110,41 @@ async function fetchNodeMetadata(
 
   if (!res.ok) return undefined;
 
+  interface RawNode {
+    name: string;
+    type: string;
+    absoluteBoundingBox?: BoundingBox;
+    fills?: unknown[];
+    strokes?: unknown[];
+    effects?: unknown[];
+    cornerRadius?: number;
+    style?: Record<string, unknown>;
+    children?: RawNode[];
+  }
+
   const data = (await res.json()) as {
-    nodes: Record<string, { document: FigmaNodeMetadata }>;
+    nodes: Record<string, { document: RawNode }>;
   };
 
-  const node = Object.values(data.nodes)[0];
-  return node?.document;
+  const doc = Object.values(data.nodes)[0]?.document;
+  if (!doc) return undefined;
+
+  // Pick only whitelisted fields — the raw document carries the full node
+  // subtree, which for page-level frames is tens of thousands of lines of
+  // JSON that would drown the comparison prompt.
+  return {
+    name: doc.name,
+    type: doc.type,
+    absoluteBoundingBox: doc.absoluteBoundingBox,
+    fills: doc.fills,
+    strokes: doc.strokes,
+    effects: doc.effects,
+    cornerRadius: doc.cornerRadius,
+    style: doc.style,
+    children: doc.children?.slice(0, 30).map((c) => ({
+      name: c.name,
+      type: c.type,
+      absoluteBoundingBox: c.absoluteBoundingBox,
+    })),
+  };
 }

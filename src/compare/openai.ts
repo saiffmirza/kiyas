@@ -11,7 +11,8 @@ const execFileAsync = promisify(execFile);
 export async function compareWithOpenAI(
   designPath: string,
   implPath: string,
-  prompt: string
+  prompt: string,
+  modelId?: string
 ): Promise<Discrepancy[]> {
   const absDesign = resolve(designPath);
   const absImpl = resolve(implPath);
@@ -27,26 +28,29 @@ export async function compareWithOpenAI(
 
   let text: string;
   try {
-    await execFileAsync(
-      "codex",
-      [
-        "exec",
-        "--sandbox",
-        "read-only",
-        "--skip-git-repo-check",
-        "--image",
-        absDesign,
-        "--image",
-        absImpl,
-        "--output-last-message",
-        outFile,
-        fullPrompt,
-      ],
-      {
-        timeout: 120_000,
-        maxBuffer: 10 * 1024 * 1024,
-      }
-    );
+    const args = [
+      "exec",
+      "--sandbox",
+      "read-only",
+      "--skip-git-repo-check",
+      "--image",
+      absDesign,
+      "--image",
+      absImpl,
+      "--output-last-message",
+      outFile,
+    ];
+    if (modelId) {
+      args.push("-m", modelId);
+    }
+    args.push(fullPrompt);
+
+    // Empty temp cwd so the host project's AGENTS.md can't leak in.
+    await execFileAsync("codex", args, {
+      cwd: dir,
+      timeout: 120_000,
+      maxBuffer: 10 * 1024 * 1024,
+    });
     text = (await readFile(outFile, "utf-8")).trim();
   } finally {
     await rm(dir, { recursive: true, force: true });

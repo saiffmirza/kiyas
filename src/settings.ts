@@ -7,6 +7,10 @@ const SETTINGS_FILE = resolve(SETTINGS_DIR, "settings.json");
 
 export interface KiyasSettings {
   model?: "claude" | "openai";
+  /** Model ID/alias passed to `claude --model` (default: "sonnet"). */
+  claudeModel?: string;
+  /** Model ID passed to `codex -m` (default: the Codex CLI's own default). */
+  codexModel?: string;
   devServer?: string;
   viewport?: string;
   threshold?: "all" | "medium" | "high";

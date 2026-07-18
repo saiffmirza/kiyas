@@ -145,21 +145,34 @@ export async function handleCompare(input: CompareInput) {
 
   const figmaToken = input.figma ? requireFigmaToken() : undefined;
   const auth = await resolveAuth(model);
+  const aiModel =
+    auth.provider === "claude"
+      ? settings.claudeModel ?? "sonnet"
+      : settings.codexModel;
 
   let targetUrl = input.target;
   let selector = input.selector;
   let componentName = input.component;
+  let resolvedInfo:
+    | { filePath: string; url: string; selector?: string }
+    | undefined;
 
   if (input.component && !input.target) {
     const resolved = await resolveComponent(
       input.component,
       devServer,
       auth.provider,
-      process.cwd()
+      process.cwd(),
+      aiModel
     );
     targetUrl = resolved.url;
     selector = resolved.selector ?? selector;
     componentName = resolved.componentName;
+    resolvedInfo = {
+      filePath: resolved.filePath,
+      url: resolved.url,
+      selector: resolved.selector,
+    };
   }
 
   const result = await runComparison({
@@ -167,6 +180,8 @@ export async function handleCompare(input: CompareInput) {
     designImage: input.designImage,
     targetUrl: targetUrl!,
     model: auth.provider,
+    aiModel,
+    resolved: resolvedInfo,
     figmaToken,
     viewport,
     scale: input.scale,

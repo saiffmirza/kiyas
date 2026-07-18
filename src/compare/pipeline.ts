@@ -1,11 +1,16 @@
 import { copyFile, mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { captureFigma, type FigmaNodeMetadata } from "../capture/figma.js";
 import { capturePlaywright } from "../capture/playwright.js";
 import { generateHtmlReport } from "../report/html.js";
 import { compareImages, parseDiscrepancies, type Discrepancy } from "./index.js";
+import { buildComparisonPrompt } from "./prompt.js";
+
+const execFileAsync = promisify(execFile);
 
 export interface ProgressEvent {
   step: "figma" | "screenshot" | "compare" | "report";
@@ -20,6 +25,10 @@ export interface RunComparisonParams {
   designImage?: string;
   targetUrl: string;
   model: "claude" | "openai";
+  /** Model ID/alias to pin the provider CLI to. */
+  aiModel?: string;
+  /** How --component resolution mapped the description, for the manifest. */
+  resolved?: { filePath: string; url: string; selector?: string };
   figmaToken?: string;
   viewport: string;
   selector?: string;
@@ -44,6 +53,24 @@ export interface ComparisonSummary {
   high: number;
   medium: number;
   low: number;
+  /** Findings at or above the run's severity threshold. */
+  aboveThreshold: number;
+}
+
+export interface RunManifest {
+  viewport: string;
+  selector?: string;
+  wait?: number;
+  scale: number;
+  fullPage: boolean;
+  threshold: string;
+  provider: "claude" | "openai";
+  aiModel?: string;
+  cliVersion?: string;
+  promptVersion: string;
+  metadataIncluded: boolean;
+  designSource: "figma" | "image";
+  resolved?: { filePath: string; url: string; selector?: string };
 }
 
 export interface ComparisonResult {
@@ -64,6 +91,22 @@ export interface PersistedReport extends ComparisonResult {
   figmaUrl?: string;
   designImage?: string;
   targetUrl: string;
+  manifest: RunManifest;
+}
+
+async function cliVersion(
+  provider: "claude" | "openai"
+): Promise<string | undefined> {
+  try {
+    const { stdout } = await execFileAsync(
+      provider === "claude" ? "claude" : "codex",
+      ["--version"],
+      { timeout: 5000 }
+    );
+    return stdout.trim();
+  } catch {
+    return undefined;
+  }
 }
 
 function newReportId(): string {
@@ -133,7 +176,8 @@ export async function runComparison(
     progress({ step: "screenshot", status: "done" });
 
     const modelLabel =
-      params.model === "claude" ? "Claude Code" : "Codex";
+      (params.model === "claude" ? "Claude Code" : "Codex") +
+      (params.aiModel ? ` (${params.aiModel})` : "");
 
     progress({ step: "compare", status: "start", message: modelLabel });
     let discrepancies: Discrepancy[];
@@ -142,6 +186,7 @@ export async function runComparison(
         designPath,
         implPath,
         provider: params.model,
+        modelId: params.aiModel,
         metadata,
       });
       progress({ step: "compare", status: "done", message: modelLabel });
@@ -176,11 +221,39 @@ export async function runComparison(
     });
     await writeFile(reportPath, html, "utf-8");
 
+    const high = discrepancies.filter((d) => d.severity === "HIGH").length;
+    const medium = discrepancies.filter((d) => d.severity === "MEDIUM").length;
+    const low = discrepancies.filter((d) => d.severity === "LOW").length;
     const summary: ComparisonSummary = {
       total: discrepancies.length,
-      high: discrepancies.filter((d) => d.severity === "HIGH").length,
-      medium: discrepancies.filter((d) => d.severity === "MEDIUM").length,
-      low: discrepancies.filter((d) => d.severity === "LOW").length,
+      high,
+      medium,
+      low,
+      aboveThreshold:
+        params.threshold === "high"
+          ? high
+          : params.threshold === "medium"
+            ? high + medium
+            : discrepancies.length,
+    };
+
+    const manifest: RunManifest = {
+      viewport: params.viewport,
+      selector: params.selector,
+      wait: params.wait,
+      scale: params.scale ?? 1,
+      fullPage: params.fullPage ?? !params.selector,
+      threshold: params.threshold,
+      provider: params.model,
+      aiModel: params.aiModel,
+      cliVersion: await cliVersion(params.model),
+      promptVersion: createHash("sha256")
+        .update(buildComparisonPrompt())
+        .digest("hex")
+        .slice(0, 12),
+      metadataIncluded: metadata !== undefined,
+      designSource: params.designImage ? "image" : "figma",
+      resolved: params.resolved,
     };
 
     const persisted: PersistedReport = {
@@ -198,6 +271,7 @@ export async function runComparison(
       figmaUrl: params.figmaUrl,
       designImage: params.designImage,
       targetUrl: params.targetUrl,
+      manifest,
     };
 
     await writeFile(
@@ -212,6 +286,7 @@ export async function runComparison(
           model: modelLabel,
           date,
           summary,
+          manifest,
           discrepancies,
         },
         null,
@@ -236,6 +311,7 @@ export async function runComparison(
                 model: modelLabel,
                 date,
                 summary,
+                manifest,
                 discrepancies,
               },
               null,
