@@ -32,6 +32,10 @@ const PROPERTY_SYNONYMS: Record<string, string> = {
   "drop-shadow": "box-shadow",
   "box shadow": "box-shadow",
   elevation: "box-shadow",
+  "border-color": "border",
+  "border-width": "border",
+  "border-style": "border",
+  outline: "border",
   alignment: "alignment",
   align: "alignment",
   position: "alignment",
@@ -59,6 +63,20 @@ export function normalizeProperty(property: string): string {
   return cleaned;
 }
 
+/**
+ * Models often report compound properties ("border-color / border-width",
+ * "height / padding"). Split on separators and normalize each part so a
+ * finding matches if ANY of its property facets matches.
+ */
+export function propertyFamilies(property: string): Set<string> {
+  return new Set(
+    property
+      .split(/\s*(?:\/|,|&|\band\b)\s*/i)
+      .filter(Boolean)
+      .map(normalizeProperty)
+  );
+}
+
 const STOP_WORDS = new Set([
   "the", "a", "an", "of", "on", "in", "and", "or", "element", "component",
 ]);
@@ -69,26 +87,53 @@ export function elementTokens(element: string): Set<string> {
       .toLowerCase()
       .split(/[^a-z0-9]+/)
       .filter((t) => t.length > 1 && !STOP_WORDS.has(t))
+      .map(singularize)
   );
+}
+
+function singularize(token: string): string {
+  return token.length > 3 && token.endsWith("s") ? token.slice(0, -1) : token;
+}
+
+function tokensMatch(a: string, b: string): boolean {
+  if (a === b) return true;
+  // Prefix match covers abbreviations: nav/navigation, btn is too short to lie
+  return a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a));
 }
 
 export function tokenOverlap(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 || b.size === 0) return 0;
+  const [smaller, larger] = a.size <= b.size ? [a, b] : [b, a];
   let shared = 0;
-  for (const t of a) if (b.has(t)) shared++;
-  return shared / Math.min(a.size, b.size);
+  for (const t of smaller) {
+    for (const other of larger) {
+      if (tokensMatch(t, other)) {
+        shared++;
+        break;
+      }
+    }
+  }
+  return shared / smaller.size;
 }
 
 /**
  * Whether two findings describe the same underlying discrepancy:
- * same property family and overlapping element description.
+ * intersecting property families and overlapping element description.
  */
 export function sameFinding(
   a: Pick<Discrepancy, "element" | "property">,
   b: Pick<Discrepancy, "element" | "property">
 ): boolean {
-  if (normalizeProperty(a.property) !== normalizeProperty(b.property)) {
-    return false;
+  const familiesA = propertyFamilies(a.property);
+  const familiesB = propertyFamilies(b.property);
+  let propertyMatch = false;
+  for (const f of familiesA) {
+    if (familiesB.has(f)) {
+      propertyMatch = true;
+      break;
+    }
   }
+  if (!propertyMatch) return false;
+
   return tokenOverlap(elementTokens(a.element), elementTokens(b.element)) >= 0.5;
 }

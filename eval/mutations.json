@@ -110,7 +110,7 @@
       "featured-border": {
         "css": ".plan.featured{border:1px solid #e5e7eb !important}",
         "golden": {
-          "element": "featured pro plan",
+          "element": "pro plan card",
           "property": "border",
           "expected": "2px blue border",
           "actual": "1px gray border",
