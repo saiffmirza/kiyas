@@ -8,6 +8,7 @@ import { captureFigma, type FigmaNodeMetadata } from "../capture/figma.js";
 import { capturePlaywright } from "../capture/playwright.js";
 import { generateHtmlReport } from "../report/html.js";
 import { compareImages, parseDiscrepancies, type Discrepancy } from "./index.js";
+import { voteOnFindings } from "./ensemble.js";
 import { buildComparisonPrompt } from "./prompt.js";
 
 const execFileAsync = promisify(execFile);
@@ -27,13 +28,20 @@ export interface RunComparisonParams {
   model: "claude" | "openai";
   /** Model ID/alias to pin the provider CLI to. */
   aiModel?: string;
+  /** Number of independent comparison runs; findings surviving a majority vote are kept. Default 1. */
+  runs?: number;
   /** How --component resolution mapped the description, for the manifest. */
   resolved?: { filePath: string; url: string; selector?: string };
   figmaToken?: string;
   viewport: string;
   selector?: string;
   wait?: number;
-  /** Export/render scale applied to BOTH the Figma export and the screenshot. Default 1. */
+  /**
+   * Export/render scale applied to BOTH the Figma export and the screenshot.
+   * Default is adaptive: 2 for component-sized captures (selector given, or
+   * viewport long side ≤ 1000px), 1 otherwise — 2x recovers subtle-detail
+   * recall but large captures get downscaled by the vision model anyway.
+   */
   scale?: number;
   /** Full-page screenshot when no selector (default true). */
   fullPage?: boolean;
@@ -66,6 +74,7 @@ export interface RunManifest {
   threshold: string;
   provider: "claude" | "openai";
   aiModel?: string;
+  runs: number;
   cliVersion?: string;
   promptVersion: string;
   metadataIncluded: boolean;
@@ -92,6 +101,14 @@ export interface PersistedReport extends ComparisonResult {
   designImage?: string;
   targetUrl: string;
   manifest: RunManifest;
+}
+
+function defaultScale(viewport: string, selector?: string): number {
+  if (selector) return 2;
+  const match = viewport.match(/^(\d+)x(\d+)$/);
+  if (!match) return 1;
+  const longSide = Math.max(parseInt(match[1], 10), parseInt(match[2], 10));
+  return longSide <= 1000 ? 2 : 1;
 }
 
 async function cliVersion(
@@ -132,6 +149,8 @@ export async function runComparison(
   const reportsDir = params.reportsDir ?? defaultReportsDir();
   const reportDir = join(reportsDir, reportId);
   await mkdir(reportDir, { recursive: true });
+  const scale =
+    params.scale ?? defaultScale(params.viewport, params.selector);
 
   try {
     let designPath: string;
@@ -150,7 +169,7 @@ export async function runComparison(
       const figmaCapture = await captureFigma(
         params.figmaUrl,
         params.figmaToken,
-        params.scale ?? 1
+        scale
       );
       tempFiles.push(figmaCapture.imagePath);
       designPath = figmaCapture.imagePath;
@@ -168,7 +187,7 @@ export async function runComparison(
       viewport: params.viewport,
       selector: params.selector,
       wait: params.wait,
-      scale: params.scale ?? 1,
+      scale,
       fullPage: params.fullPage,
       authState: params.authState,
     });
@@ -180,15 +199,24 @@ export async function runComparison(
       (params.aiModel ? ` (${params.aiModel})` : "");
 
     progress({ step: "compare", status: "start", message: modelLabel });
+    const runCount = Math.max(1, params.runs ?? 1);
     let discrepancies: Discrepancy[];
     try {
-      discrepancies = await compareImages({
+      const compareOptions = {
         designPath,
         implPath,
         provider: params.model,
         modelId: params.aiModel,
         metadata,
-      });
+      };
+      if (runCount === 1) {
+        discrepancies = await compareImages(compareOptions);
+      } else {
+        const results = await Promise.all(
+          Array.from({ length: runCount }, () => compareImages(compareOptions))
+        );
+        discrepancies = voteOnFindings(results);
+      }
       progress({ step: "compare", status: "done", message: modelLabel });
     } catch (err) {
       progress({
@@ -241,11 +269,12 @@ export async function runComparison(
       viewport: params.viewport,
       selector: params.selector,
       wait: params.wait,
-      scale: params.scale ?? 1,
+      scale,
       fullPage: params.fullPage ?? !params.selector,
       threshold: params.threshold,
       provider: params.model,
       aiModel: params.aiModel,
+      runs: runCount,
       cliVersion: await cliVersion(params.model),
       promptVersion: createHash("sha256")
         .update(buildComparisonPrompt())

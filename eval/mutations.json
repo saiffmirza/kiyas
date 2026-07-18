@@ -1,0 +1,260 @@
+{
+  "button-group": {
+    "viewport": "480x160",
+    "clean": true,
+    "mutations": {
+      "radius": {
+        "css": ".btn-primary{border-radius:2px !important}",
+        "golden": {
+          "element": "primary button",
+          "property": "border-radius",
+          "expected": "8px",
+          "actual": "2px",
+          "severity": "MEDIUM"
+        }
+      },
+      "weight": {
+        "css": ".btn-primary{font-weight:400 !important}",
+        "golden": {
+          "element": "primary button",
+          "property": "font-weight",
+          "expected": "600",
+          "actual": "400",
+          "severity": "MEDIUM"
+        }
+      }
+    }
+  },
+  "card": {
+    "viewport": "480x420",
+    "clean": true,
+    "mutations": {
+      "shadow": {
+        "css": ".card{box-shadow:none !important}",
+        "golden": {
+          "element": "card",
+          "property": "box-shadow",
+          "expected": "soft drop shadow",
+          "actual": "none",
+          "severity": "MEDIUM"
+        }
+      },
+      "padding": {
+        "css": ".card{padding:10px !important}",
+        "golden": {
+          "element": "card",
+          "property": "padding",
+          "expected": "24px",
+          "actual": "10px",
+          "severity": "HIGH"
+        }
+      }
+    }
+  },
+  "form": {
+    "viewport": "480x560",
+    "clean": true,
+    "mutations": {
+      "button-color": {
+        "css": "form button{background:#2563eb !important}",
+        "golden": {
+          "element": "sign in button",
+          "property": "background-color",
+          "expected": "near-black #111827",
+          "actual": "blue #2563eb",
+          "severity": "HIGH"
+        }
+      },
+      "label-size": {
+        "css": "label{font-size:11px !important}",
+        "golden": {
+          "element": "field labels",
+          "property": "font-size",
+          "expected": "14px",
+          "actual": "11px",
+          "severity": "MEDIUM"
+        }
+      }
+    }
+  },
+  "navbar": {
+    "viewport": "900x120",
+    "clean": true,
+    "mutations": {
+      "gap": {
+        "css": ".links{gap:10px !important}",
+        "golden": {
+          "element": "nav links",
+          "property": "gap",
+          "expected": "32px",
+          "actual": "10px",
+          "severity": "MEDIUM"
+        }
+      },
+      "logo-missing": {
+        "remove": ".logo",
+        "golden": {
+          "element": "logo",
+          "property": "missing element",
+          "expected": "acme logo present",
+          "actual": "missing",
+          "severity": "HIGH"
+        }
+      }
+    }
+  },
+  "pricing": {
+    "viewport": "640x440",
+    "clean": true,
+    "mutations": {
+      "featured-border": {
+        "css": ".plan.featured{border:1px solid #e5e7eb !important}",
+        "golden": {
+          "element": "pro plan card",
+          "property": "border",
+          "expected": "2px blue border",
+          "actual": "1px gray border",
+          "severity": "HIGH"
+        }
+      },
+      "price-size": {
+        "css": ".price{font-size:24px !important}",
+        "golden": {
+          "element": "price",
+          "property": "font-size",
+          "expected": "36px",
+          "actual": "24px",
+          "severity": "MEDIUM"
+        }
+      }
+    }
+  },
+  "hero": {
+    "viewport": "900x480",
+    "mutations": {
+      "heading-size": {
+        "css": "h1{font-size:32px !important}",
+        "golden": {
+          "element": "hero heading",
+          "property": "font-size",
+          "expected": "48px",
+          "actual": "32px",
+          "severity": "HIGH"
+        }
+      },
+      "cta-color": {
+        "css": ".cta{background:#f97316 !important}",
+        "golden": {
+          "element": "cta button",
+          "property": "background-color",
+          "expected": "light blue #38bdf8",
+          "actual": "orange #f97316",
+          "severity": "HIGH"
+        }
+      }
+    }
+  },
+  "badges": {
+    "viewport": "480x140",
+    "mutations": {
+      "radius": {
+        "css": ".badge{border-radius:3px !important}",
+        "golden": {
+          "element": "badges",
+          "property": "border-radius",
+          "expected": "fully rounded pill",
+          "actual": "3px",
+          "severity": "MEDIUM"
+        }
+      },
+      "badge-missing": {
+        "remove": ".badge.red",
+        "golden": {
+          "element": "failed badge",
+          "property": "missing element",
+          "expected": "red Failed badge present",
+          "actual": "missing",
+          "severity": "HIGH"
+        }
+      }
+    }
+  },
+  "footer": {
+    "viewport": "900x140",
+    "mutations": {
+      "alignment": {
+        "css": "footer{justify-content:flex-start !important;gap:40px}",
+        "golden": {
+          "element": "footer",
+          "property": "alignment",
+          "expected": "links right-aligned, space-between",
+          "actual": "everything left-aligned",
+          "severity": "MEDIUM"
+        }
+      },
+      "text": {
+        "text": [
+          ".copy",
+          "© 2026 acme incorporated, all rights reserved"
+        ],
+        "golden": {
+          "element": "copyright text",
+          "property": "text content",
+          "expected": "© 2026 acme inc.",
+          "actual": "© 2026 acme incorporated, all rights reserved",
+          "severity": "LOW"
+        }
+      }
+    }
+  },
+  "table": {
+    "viewport": "700x340",
+    "mutations": {
+      "stripes": {
+        "css": "tbody tr:nth-child(even){background:transparent !important}",
+        "golden": {
+          "element": "table rows",
+          "property": "background-color",
+          "expected": "zebra striping on even rows",
+          "actual": "no striping",
+          "severity": "LOW"
+        }
+      },
+      "header-weight": {
+        "css": "th{font-weight:400 !important}",
+        "golden": {
+          "element": "table header",
+          "property": "font-weight",
+          "expected": "600",
+          "actual": "400",
+          "severity": "MEDIUM"
+        }
+      }
+    }
+  },
+  "sidebar": {
+    "viewport": "340x520",
+    "mutations": {
+      "active-color": {
+        "css": ".item.active{background:#16a34a !important}",
+        "golden": {
+          "element": "active nav item",
+          "property": "background-color",
+          "expected": "blue #2563eb",
+          "actual": "green #16a34a",
+          "severity": "HIGH"
+        }
+      },
+      "width": {
+        "css": ".sidebar{width:190px !important}",
+        "golden": {
+          "element": "sidebar",
+          "property": "width",
+          "expected": "240px",
+          "actual": "190px",
+          "severity": "MEDIUM"
+        }
+      }
+    }
+  }
+}

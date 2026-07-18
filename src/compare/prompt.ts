@@ -29,13 +29,14 @@ Analyze both images and identify all visual discrepancies between the design and
 3. **Expected**: What the Figma design shows (be specific with values where possible)
 4. **Actual**: What the implementation appears to show
 5. **Severity**: Rate as HIGH (clearly visible to users, breaks design intent), MEDIUM (noticeable but minor), or LOW (subtle, cosmetic)
+6. **Region**: An approximate bounding box of the affected area in the implementation screenshot, in pixels: {"x": ..., "y": ..., "width": ..., "height": ...}. A rough location is fine; omit it if you cannot locate the element.
 
 Also note:
 - Any elements present in the design but missing from the implementation
 - Any elements present in the implementation but not in the design
 - Overall layout/alignment differences
 ${metadataContext}${scaleContext}
-Format your response as a JSON array of objects with the fields: element, property, expected, actual, severity.
+Format your response as a JSON array of objects with the fields: element, property, expected, actual, severity, region (optional).
 
 If the implementation matches the design perfectly, return exactly [].
 

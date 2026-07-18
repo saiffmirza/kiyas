@@ -250,7 +250,7 @@ kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
 | `--output <path>`           | Path to save the report (default: `kiyas-report-<timestamp>.html`) | No  |
 | `--format <type>`           | Output format: `html` (default) or `json`                     | No       |
 | `--viewport <size>`         | Viewport size for screenshot (default: `1280x720`)            | No       |
-| `--scale <n>`               | Render scale applied to both the Figma export and screenshot (default: `1`) | No |
+| `--scale <n>`               | Render scale for both Figma export and screenshot. Default adaptive: `2` for component-sized captures (selector, or viewport ≤ 1000px), `1` for large full-page captures | No |
 | `--no-full-page`            | Capture only the viewport instead of the full scrollable page | No       |
 | `--selector <css>`          | CSS selector to screenshot a specific element                 | No       |
 | `--wait <ms>`               | Time in ms to wait before screenshot (for animations/loading) | No       |
@@ -331,9 +331,11 @@ kiyas is a harness around vision AI, and a harness is only useful if its results
 
 - **Pinned models** — the comparison and resolver models are pinned (`claude --model` / `codex -m`) instead of drifting with CLI defaults. Configure with `kiyas set claudeModel <id>` / `kiyas set codexModel <id>`.
 - **Isolated AI context** — comparisons run in an empty working directory so your project's `CLAUDE.md`/`AGENTS.md`, hooks, and MCP servers can't influence the output.
-- **Frozen capture environment** — animations and transitions disabled, fonts awaited, UTC timezone, fixed locale, full-page screenshots, and the Figma export scale always matches the screenshot's device scale factor.
+- **Frozen capture environment** — animations and transitions disabled, fonts awaited, UTC timezone, fixed locale, full-page screenshots, and the Figma export scale always matches the screenshot's device scale factor. Component-sized captures default to 2x — measured on the eval set, that raised subtle-mutation recall from 75% to 90%.
 - **Validated output** — model responses are schema-validated (malformed findings are dropped with a warning; a majority-invalid response fails the run instead of producing a quietly wrong report).
 - **Run manifest** — every report's JSON records the viewport, scale, threshold, pinned model, CLI version, prompt version hash, and how a `--component` description was resolved, so any two reports can be meaningfully compared.
+- **Multi-run voting** — `--runs 3` runs the comparison three times concurrently and keeps only majority-vote findings, each tagged with a confidence score. Higher consistency at N× cost; off by default.
+- **Measured, not vibed** — `npm run eval` (repo only, not shipped) runs a golden eval set: fixture pages with known injected CSS mutations plus zero-mutation pairs, scored deterministically for recall, precision, severity agreement, false-positive floor, and run-to-run stability. Prompt and pipeline changes are validated against it.
 
 ---
 

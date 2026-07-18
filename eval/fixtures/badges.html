@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="_loader.js"></script>
+<style>
+  body { margin: 0; padding: 40px; font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; background: #fff; }
+  .row { display: flex; gap: 10px; }
+  .badge { font-size: 13px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+  .badge.green { background: #dcfce7; color: #166534; }
+  .badge.amber { background: #fef3c7; color: #92400e; }
+  .badge.red { background: #fee2e2; color: #991b1b; }
+  .badge.gray { background: #f3f4f6; color: #374151; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <span class="badge green">Passed</span>
+    <span class="badge amber">Pending</span>
+    <span class="badge red">Failed</span>
+    <span class="badge gray">Skipped</span>
+  </div>
+</body>
+</html>

@@ -10,6 +10,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "start": "node dist/index.js",
+    "eval": "esbuild eval/run.ts --bundle --format=esm --platform=node --packages=external --outfile=eval/dist/run.mjs && node eval/dist/run.mjs",
+    "test": "esbuild eval/matcher.test.ts --bundle --format=esm --platform=node --packages=external --outfile=eval/dist/matcher.test.mjs && node --test eval/dist/matcher.test.mjs",
     "postinstall": "node scripts/postinstall.js"
   },
   "keywords": [

@@ -6,6 +6,10 @@ dist/
 FUTURE.md
 .vscode/
 
+# Eval outputs
+eval/results/
+eval/dist/
+
 # Generated reports and screenshots
 kiyas-report-*
 kiyas-design-*
