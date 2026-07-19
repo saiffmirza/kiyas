@@ -4,6 +4,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import icon from "../../resources/icon.png?asset";
 import { registerIpc } from "./ipc.js";
+import { registerTerminal } from "./terminal.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -50,6 +51,7 @@ app.whenReady().then(() => {
   if (process.platform === "darwin") app.dock.setIcon(icon);
   const win = createWindow();
   registerIpc(win);
+  registerTerminal(win);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

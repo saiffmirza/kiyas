@@ -7,12 +7,29 @@ import type {
 
 const api: KiyasApi = {
   doctor: () => ipcRenderer.invoke("doctor"),
+  reportsList: (repo: string) => ipcRenderer.invoke("reports-list", repo),
+  reportsOpen: (repo: string, reportId: string) =>
+    ipcRenderer.invoke("reports-open", repo, reportId),
   reposLoad: () => ipcRenderer.invoke("repos-load"),
   reposAdd: () => ipcRenderer.invoke("repos-add"),
   reposRemove: (path: string) => ipcRenderer.invoke("repos-remove", path),
   reposSelect: (path: string) => ipcRenderer.invoke("repos-select", path),
   portsList: () => ipcRenderer.invoke("ports-list"),
-  openTerminal: (cwd?: string) => ipcRenderer.invoke("open-terminal", cwd),
+  termStart: (cwd?: string) => ipcRenderer.invoke("term-start", cwd),
+  termInput: (data: string) => ipcRenderer.send("term-input", data),
+  termResize: (cols: number, rows: number) =>
+    ipcRenderer.send("term-resize", cols, rows),
+  termStop: () => ipcRenderer.invoke("term-stop"),
+  onTermData: (cb: (data: string) => void) => {
+    const listener = (_event: IpcRendererEvent, data: string) => cb(data);
+    ipcRenderer.on("term-data", listener);
+    return () => ipcRenderer.removeListener("term-data", listener);
+  },
+  onTermExit: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on("term-exit", listener);
+    return () => ipcRenderer.removeListener("term-exit", listener);
+  },
   setupProvider: (provider: "claude" | "codex") =>
     ipcRenderer.invoke("setup-provider", provider),
   saveFigmaToken: (token: string) =>

@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import wordmark from "./assets/wordmark.png";
+import wordmarkDark from "./assets/wordmark-dark.png";
+import { TerminalPanel } from "./TerminalPanel";
 import type {
   CaptureResponse,
   CompareResponse,
   DesktopProgressEvent,
   DoctorReport,
   OpenPort,
+  ReportListItem,
   RepoState,
 } from "../../shared/types";
 
@@ -34,6 +38,45 @@ export function App() {
   const [tokenValue, setTokenValue] = useState("");
   const [tokenError, setTokenError] = useState("");
   const [tokenSaving, setTokenSaving] = useState(false);
+  const [termOpen, setTermOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    try {
+      const stored = localStorage.getItem("kiyas.theme");
+      if (stored === "light" || stored === "dark") return stored;
+    } catch {
+      // fall through to system preference
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem("kiyas.theme", theme);
+    } catch {
+      // non-persistent storage — theme still applies for this session
+    }
+  }, [theme]);
+  const [connectionsOpen, setConnectionsOpen] = useState(() => {
+    try {
+      return localStorage.getItem("kiyas.connectionsOpen") !== "0";
+    } catch {
+      return true;
+    }
+  });
+
+  function toggleConnections() {
+    setConnectionsOpen((open) => {
+      try {
+        localStorage.setItem("kiyas.connectionsOpen", open ? "0" : "1");
+      } catch {
+        // non-persistent storage (file:// page) — the toggle still works
+      }
+      return !open;
+    });
+  }
 
   // --- compare state ---
   const [designTab, setDesignTab] = useState<"figma" | "image">("figma");
@@ -53,10 +96,16 @@ export function App() {
     (CompareResponse & { ok: true }) | null
   >(null);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState<ReportListItem[]>([]);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const repo = repoState.selectedRepo ?? "";
   const targetUrl = selectedPort ? `http://localhost:${selectedPort}` : "";
+
+  const refreshHistory = useCallback((repoPath: string) => {
+    if (repoPath) window.kiyas.reportsList(repoPath).then(setHistory);
+    else setHistory([]);
+  }, []);
 
   useEffect(() => {
     window.kiyas.reposLoad().then(setRepoState);
@@ -77,7 +126,10 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    // keep the selection valid as ports come and go
+    refreshHistory(repo);
+  }, [repo, refreshHistory]);
+
+  useEffect(() => {
     if (selectedPort && !ports.some((p) => p.port === selectedPort)) {
       setSelectedPort(null);
     } else if (!selectedPort && ports.length === 1) {
@@ -101,10 +153,11 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (phase === "done" || phase === "error") {
+    if (phase === "error") {
       resultRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [phase]);
+    if (phase === "done") refreshHistory(repo);
+  }, [phase, repo, refreshHistory]);
 
   async function setupProvider(provider: "claude" | "codex") {
     const label = provider === "claude" ? "Claude Code" : "Codex";
@@ -139,11 +192,17 @@ export function App() {
   }, [component, designTab]);
 
   const busy = phase === "capturing" || phase === "comparing";
-  const canRun =
-    !busy &&
-    repo &&
-    targetUrl &&
-    (designTab === "figma" ? figmaUrl.trim() : designImage);
+  const hasDesign = designTab === "figma" ? Boolean(figmaUrl.trim()) : Boolean(designImage);
+  const missingStep = !repo
+    ? "add a project in the sidebar"
+    : !targetUrl
+      ? "pick a dev server port in the sidebar"
+      : !hasDesign
+        ? designTab === "figma"
+          ? "paste a Figma link"
+          : "choose a screenshot"
+        : "";
+  const canRun = !busy && !missingStep;
 
   async function run() {
     setPhase("capturing");
@@ -185,17 +244,46 @@ export function App() {
     }
   }
 
+  function resetForNew() {
+    setFigmaUrl("");
+    setDesignImage("");
+    setComponent("");
+    setResult(null);
+    setPreview(null);
+    setSteps({});
+    setStepMsgs({});
+    setError("");
+    setPreviewError("");
+    setPhase("idle");
+  }
+
+  async function openPastReport(reportId: string) {
+    const response = await window.kiyas.reportsOpen(repo, reportId);
+    if (response.ok) {
+      setResult(response);
+      setPreview(null);
+      setSteps({});
+      setPhase("done");
+    } else {
+      setError(response.error);
+      setPhase("error");
+    }
+  }
+
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <span className="brand-word">kiyas</span>
-          <span className="brand-arabic">كياس</span>
+          <img
+            src={theme === "dark" ? wordmarkDark : wordmark}
+            alt="kiyas"
+            className="brand-mark"
+          />
         </div>
 
         <div className="side-section">
           <div className="side-heading">
-            <span>Repos</span>
+            <span>Projects</span>
             <button
               className="side-add"
               title="Add a project folder"
@@ -205,7 +293,10 @@ export function App() {
             </button>
           </div>
           {repoState.repos.length === 0 && (
-            <p className="side-empty">Add the repo that renders your UI.</p>
+            <p className="side-empty">
+              Add the repo that renders your UI — comparisons and reports live
+              with it.
+            </p>
           )}
           <ul className="repo-list">
             {repoState.repos.map((path) => (
@@ -233,93 +324,166 @@ export function App() {
           </ul>
         </div>
 
-        <div className="side-section">
-          <div className="side-heading">
-            <span>Open ports</span>
-          </div>
-          {ports.length === 0 && (
-            <p className="side-empty">
-              No dev servers detected. Start one, e.g. npm run dev.
-            </p>
-          )}
-          <ul className="port-list">
-            {ports.map((p) => (
-              <li
-                key={p.port}
-                className={p.port === selectedPort ? "selected" : ""}
-                onClick={() => setSelectedPort(p.port)}
-              >
-                <span className="port-dot" />
-                <span className="port-num">:{p.port}</span>
-                <span className="port-proc">{p.process}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="sidebar-footer">
-          {doctor && (
-            <ul className="env-list">
-              <li>
-                <span className={`env-dot ${doctor.claude.ok ? "ok" : ""}`} />
-                Claude Code
-                {!doctor.claude.ok && (
-                  <button
-                    className="env-cta"
-                    onClick={() => setupProvider("claude")}
-                  >
-                    Set up
-                  </button>
-                )}
-              </li>
-              <li>
-                <span className={`env-dot ${doctor.codex.ok ? "ok" : ""}`} />
-                Codex
-                {!doctor.codex.ok && (
-                  <button
-                    className="env-cta"
-                    onClick={() => setupProvider("codex")}
-                  >
-                    Set up
-                  </button>
-                )}
-              </li>
-              <li>
-                <span
-                  className={`env-dot ${doctor.figmaToken.ok ? "ok" : ""}`}
-                />
-                Figma token
-                {!doctor.figmaToken.ok && (
-                  <button
-                    className="env-cta"
-                    onClick={() => {
-                      setTokenPanelOpen((open) => !open);
-                      setSetupHint("");
-                    }}
-                  >
-                    Add
-                  </button>
-                )}
-              </li>
+        <div className="sidebar-bottom">
+          <div className="side-section">
+            <div className="side-heading">
+              <span>Dev servers</span>
+            </div>
+            {ports.length === 0 && (
+              <p className="side-empty">
+                None running. Start one in your project, e.g. npm run dev.
+              </p>
+            )}
+            <ul className="port-list">
+              {ports.map((p) => (
+                <li
+                  key={p.port}
+                  className={p.port === selectedPort ? "selected" : ""}
+                  onClick={() => setSelectedPort(p.port)}
+                >
+                  <span className="port-dot" />
+                  <span className="port-num">:{p.port}</span>
+                  <span className="port-proc">{p.process}</span>
+                </li>
+              ))}
             </ul>
-          )}
-          {setupHint && <p className="side-hint">{setupHint}</p>}
-          <button
-            className="terminal-btn"
-            onClick={() => window.kiyas.openTerminal(repo || undefined)}
-          >
-            ⌘ Open Terminal{repo ? ` · ${basename(repo)}` : ""}
-          </button>
+          </div>
+
+          <div className="sidebar-footer">
+            <div className="side-heading">
+              <button className="side-toggle" onClick={toggleConnections}>
+                <span>Connections</span>
+                <span className={`caret${connectionsOpen ? " open" : ""}`}>
+                  ▸
+                </span>
+              </button>
+            </div>
+            {connectionsOpen && doctor && (
+              <ul className="env-list">
+                <li>
+                  Claude Code
+                  {doctor.claude.ok ? (
+                    <span className="env-tag">Connected</span>
+                  ) : (
+                    <button
+                      className="env-cta"
+                      onClick={() => setupProvider("claude")}
+                    >
+                      Set up
+                    </button>
+                  )}
+                </li>
+                <li>
+                  Codex
+                  {doctor.codex.ok ? (
+                    <span className="env-tag">Connected</span>
+                  ) : (
+                    <button
+                      className="env-cta"
+                      onClick={() => setupProvider("codex")}
+                    >
+                      Set up
+                    </button>
+                  )}
+                </li>
+                <li>
+                  Figma token
+                  {doctor.figmaToken.ok ? (
+                    <span className="env-tag">Connected</span>
+                  ) : (
+                    <button
+                      className="env-cta"
+                      onClick={() => {
+                        setTokenPanelOpen((open) => !open);
+                        setSetupHint("");
+                      }}
+                    >
+                      Add
+                    </button>
+                  )}
+                </li>
+              </ul>
+            )}
+            {connectionsOpen && setupHint && (
+              <p className="side-hint">{setupHint}</p>
+            )}
+            <button
+              className="terminal-btn"
+              onClick={() => setTermOpen((open) => !open)}
+            >
+              {termOpen
+                ? "Close Terminal"
+                : `Terminal${repo ? ` · ${basename(repo)}` : ""}`}
+            </button>
+          </div>
         </div>
       </aside>
 
-      <main className="main">
-        <div className="main-drag" />
+      <main className={`main${termOpen ? " with-term" : ""}`}>
+        <div className="main-scroll">
+        <div className="main-drag">
+          <div className="theme-switch">
+            <button
+              className={theme === "light" ? "active" : ""}
+              title="Light mode"
+              onClick={() => setTheme("light")}
+            >
+              ☀
+            </button>
+            <button
+              className={theme === "dark" ? "active" : ""}
+              title="Dark mode"
+              onClick={() => setTheme("dark")}
+            >
+              ☾
+            </button>
+          </div>
+        </div>
+        {phase === "done" && result ? (
+          <div className="main-inner focus">
+            <section className="result-focus">
+              <div className="result-head">
+                <h2>Result</h2>
+                <span className="context-chip">{result.modelLabel}</span>
+                <p className="verdict-inline">
+                  <strong>{result.summary.total}</strong>
+                  {result.summary.total === 1
+                    ? " discrepancy"
+                    : " discrepancies"}
+                  {result.summary.high > 0 && (
+                    <em className="c-high">{result.summary.high} high</em>
+                  )}
+                  {result.summary.medium > 0 && (
+                    <em className="c-medium">{result.summary.medium} medium</em>
+                  )}
+                  {result.summary.low > 0 && (
+                    <em className="c-low">{result.summary.low} low</em>
+                  )}
+                </p>
+                <span className="result-spacer" />
+                <button
+                  className="btn"
+                  onClick={() => window.kiyas.openReport(result.reportPath)}
+                >
+                  Open in browser
+                </button>
+                <button className="btn primary" onClick={resetForNew}>
+                  New comparison
+                </button>
+              </div>
+              <iframe
+                className="report-fill"
+                title="Kiyas report"
+                srcDoc={result.reportHtml}
+              />
+            </section>
+          </div>
+        ) : (
         <div className="main-inner">
           {tokenPanelOpen && (
-            <div className="card">
+            <section className="card">
               <h2>Add your Figma token</h2>
-              <p className="preview-meta" style={{ marginTop: 0, marginBottom: 12 }}>
+              <p className="soft-note">
                 In Figma: avatar → Settings → Security → Personal access
                 tokens. Read-only File content scope is enough — kiyas never
                 modifies your designs.
@@ -352,16 +516,17 @@ export function App() {
                   {tokenError}
                 </div>
               )}
-            </div>
+            </section>
           )}
 
-          <div className="card">
+          <section className="card compare-card">
             <div className="card-head">
-              <h2>Compare</h2>
-              <span className="context-line">
-                {repo ? basename(repo) : "no repo"}
-                {" · "}
-                {targetUrl || "no dev server selected"}
+              <h2>New comparison</h2>
+              <span className="context-chips">
+                {repo && <span className="context-chip">{basename(repo)}</span>}
+                {targetUrl && (
+                  <span className="context-chip mono">{targetUrl}</span>
+                )}
               </span>
             </div>
 
@@ -406,54 +571,98 @@ export function App() {
             )}
 
             <div className="field">
+              <label>
+                Which component? <span className="hint">optional — AI finds it in the code</span>
+              </label>
               <input
                 type="text"
                 value={component}
-                placeholder='Which component? e.g. "the event header on the redemption screen" (optional — AI finds it)'
+                placeholder='e.g. "the event header on the redemption screen"'
                 onChange={(e) => setComponent(e.target.value)}
               />
             </div>
 
-            <button className="btn primary" disabled={!canRun} onClick={run}>
-              {phase === "capturing"
-                ? "Capturing…"
-                : phase === "comparing"
-                  ? "Comparing…"
-                  : "Compare"}
-            </button>
-          </div>
-
-          {phase !== "idle" && (
-            <div className="card">
-              <h2>Progress</h2>
-              <ul className="progress">
-                {visibleSteps.map((id) => {
-                  const state = steps[id] ?? "pending";
-                  return (
-                    <li key={id} className={state}>
-                      <span className="icon">
-                        {state === "done" ? "✓" : state === "fail" ? "✕" : "•"}
-                      </span>
-                      <span>{STEP_LABELS[id]}</span>
-                      {stepMsgs[id] && (
-                        <span className="msg">{stepMsgs[id]}</span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+            <div className="run-row">
+              <button className="btn primary" disabled={!canRun} onClick={run}>
+                {phase === "capturing"
+                  ? "Capturing…"
+                  : phase === "comparing"
+                    ? "Comparing…"
+                    : "Compare"}
+              </button>
+              {!busy && missingStep && (
+                <span className="run-hint">First, {missingStep}.</span>
+              )}
             </div>
+          </section>
+
+          {phase === "idle" && (
+            <section className="how-it-works">
+              <h3>How it works</h3>
+              <ol className="steps">
+                <li className={repo && targetUrl ? "done" : "current"}>
+                  <span className="diamond" />
+                  Pick your project and its running dev server in the sidebar
+                </li>
+                <li
+                  className={
+                    !repo || !targetUrl
+                      ? ""
+                      : hasDesign
+                        ? "done"
+                        : "current"
+                  }
+                >
+                  <span className="diamond" />
+                  Paste a Figma frame link, or use a screenshot of the design
+                </li>
+                <li
+                  className={repo && targetUrl && hasDesign ? "current" : ""}
+                >
+                  <span className="diamond" />
+                  Compare — you approve the captured pair before any AI runs
+                </li>
+              </ol>
+            </section>
+          )}
+
+          {phase === "idle" && history.length > 0 && (
+            <section className="history">
+              <h3>Recent comparisons · {basename(repo)}</h3>
+              <ul className="history-list">
+                {history.map((h) => (
+                  <li key={h.reportId} onClick={() => openPastReport(h.reportId)}>
+                    <span className="history-name">
+                      {h.name || h.reportId.slice(0, 10).replace("_", " ")}
+                    </span>
+                    <span className="history-date">{h.date}</span>
+                    <span className="history-counts">
+                      {h.summary.high > 0 && (
+                        <em className="c-high">{h.summary.high} high</em>
+                      )}
+                      {h.summary.medium > 0 && (
+                        <em className="c-medium">{h.summary.medium} med</em>
+                      )}
+                      {h.summary.low > 0 && (
+                        <em className="c-low">{h.summary.low} low</em>
+                      )}
+                      {h.summary.total === 0 && (
+                        <em className="c-clean">clean</em>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
 
           {(phase === "preview" || phase === "comparing") && preview && (
-            <div className="card">
+            <section className="card">
               <h2>Check the captures before comparing</h2>
               {preview.warning && (
                 <div className="warning-box">{preview.warning}</div>
               )}
-              {previewError && (
-                <div className="error-box">{previewError}</div>
-              )}
+              {previewError && <div className="error-box">{previewError}</div>}
               <div className="preview-grid">
                 <div className="preview-col">
                   <div className="preview-label">
@@ -471,7 +680,7 @@ export function App() {
                 </div>
               </div>
               {preview.resolved && (
-                <p className="preview-meta">
+                <p className="soft-note">
                   Matched {preview.resolved.filePath}
                   {preview.selector ? ` · selector ${preview.selector}` : ""}
                 </p>
@@ -524,55 +733,60 @@ export function App() {
                   Start over
                 </button>
               </div>
-            </div>
+            </section>
+          )}
+
+          {phase !== "idle" && phase !== "error" && (
+            <section className={`card progress-card${busy ? " busy" : ""}`}>
+              <h2>{busy ? "Working…" : "Progress"}</h2>
+              {busy && <div className="workbar" />}
+              <ul className="progress">
+                {visibleSteps.map((id) => {
+                  const state = steps[id] ?? "pending";
+                  return (
+                    <li key={id} className={state}>
+                      <span className="icon">
+                        {state === "done" ? "✓" : state === "fail" ? "✕" : "•"}
+                      </span>
+                      <span>{STEP_LABELS[id]}</span>
+                      {stepMsgs[id] && (
+                        <span className="msg">{stepMsgs[id]}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
           )}
 
           <div ref={resultRef}>
             {phase === "error" && (
-              <div className="card">
+              <section className="card">
                 <h2>Something went wrong</h2>
                 <div className="error-box">{error}</div>
-              </div>
-            )}
-
-            {phase === "done" && result && (
-              <div className="card">
-                <h2>Result · {result.modelLabel}</h2>
-                <div className="summary">
-                  <div className="stat">
-                    <div className="num">{result.summary.total}</div>
-                    <div className="label">Findings</div>
-                  </div>
-                  <div className="stat high">
-                    <div className="num">{result.summary.high}</div>
-                    <div className="label">High</div>
-                  </div>
-                  <div className="stat medium">
-                    <div className="num">{result.summary.medium}</div>
-                    <div className="label">Medium</div>
-                  </div>
-                  <div className="stat low">
-                    <div className="num">{result.summary.low}</div>
-                    <div className="label">Low</div>
-                  </div>
-                </div>
-                <iframe
-                  className="report-frame"
-                  title="Kiyas report"
-                  srcDoc={result.reportHtml}
-                />
                 <div className="actions">
-                  <button
-                    className="btn"
-                    onClick={() => window.kiyas.openReport(result.reportPath)}
-                  >
-                    Open in browser
+                  <button className="btn" onClick={() => setPhase("idle")}>
+                    Back
                   </button>
                 </div>
-              </div>
+              </section>
             )}
+
           </div>
         </div>
+        )}
+        </div>
+        {termOpen && (
+          <div className="term-drawer">
+            <div className="term-bar">
+              <span>Terminal{repo ? ` · ${basename(repo)}` : ""}</span>
+              <button title="Close" onClick={() => setTermOpen(false)}>
+                ×
+              </button>
+            </div>
+            <TerminalPanel cwd={repo || undefined} dark={theme === "dark"} />
+          </div>
+        )}
       </main>
     </div>
   );

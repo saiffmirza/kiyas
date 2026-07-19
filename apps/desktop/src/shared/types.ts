@@ -70,14 +70,29 @@ export interface OpenPort {
   process: string;
 }
 
+export interface ReportListItem {
+  reportId: string;
+  name?: string;
+  date: string;
+  summary: ComparisonSummary;
+}
+
 export interface KiyasApi {
   doctor: () => Promise<DoctorReport>;
+  reportsList: (repo: string) => Promise<ReportListItem[]>;
+  reportsOpen: (repo: string, reportId: string) => Promise<CompareResponse>;
   reposLoad: () => Promise<RepoState>;
   reposAdd: () => Promise<RepoState>;
   reposRemove: (path: string) => Promise<RepoState>;
   reposSelect: (path: string) => Promise<RepoState>;
   portsList: () => Promise<OpenPort[]>;
-  openTerminal: (cwd?: string) => Promise<void>;
+  /** In-app terminal (node-pty in the main process, xterm.js in the renderer). */
+  termStart: (cwd?: string) => Promise<void>;
+  termInput: (data: string) => void;
+  termResize: (cols: number, rows: number) => void;
+  termStop: () => Promise<void>;
+  onTermData: (cb: (data: string) => void) => () => void;
+  onTermExit: (cb: () => void) => () => void;
   /** Opens Terminal running the provider's install + sign-in flow. */
   setupProvider: (
     provider: "claude" | "codex"

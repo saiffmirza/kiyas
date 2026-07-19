@@ -6,7 +6,7 @@ import {
   type BrowserWindow,
 } from "electron";
 import { execFile } from "node:child_process";
-import { readFile, unlink, writeFile } from "node:fs/promises";
+import { readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -14,6 +14,7 @@ import {
   captureFigma,
   captureMismatchWarning,
   capturePlaywright,
+  loadReport,
   loadSettings,
   resolveComponent,
   resolveFigmaToken,
@@ -29,6 +30,7 @@ import type {
   CropResponse,
   DesktopProgressEvent,
   OpenPort,
+  ReportListItem,
   RepoState,
 } from "../shared/types.js";
 
@@ -152,18 +154,60 @@ export function registerIpc(win: BrowserWindow): void {
 
   ipcMain.handle("ports-list", () => listOpenPorts());
 
-  ipcMain.handle("open-terminal", async (_event, cwd?: string) => {
-    if (process.platform !== "darwin") return;
-    const script = cwd ? `cd ${JSON.stringify(cwd)}` : "";
-    await execFileAsync("osascript", [
-      "-e",
-      script
-        ? `tell application "Terminal" to do script "${script.replace(/"/g, '\\"')}"`
-        : 'tell application "Terminal" to do script ""',
-      "-e",
-      'tell application "Terminal" to activate',
-    ]);
-  });
+  ipcMain.handle(
+    "reports-list",
+    async (_event, repo: string): Promise<ReportListItem[]> => {
+      const reportsDir = join(repo, ".kiyas", "reports");
+      let ids: string[];
+      try {
+        ids = await readdir(reportsDir);
+      } catch {
+        return [];
+      }
+      const items = await Promise.all(
+        ids.map(async (id): Promise<ReportListItem | null> => {
+          try {
+            const r = await loadReport(id, reportsDir);
+            return {
+              reportId: r.reportId,
+              name: r.name,
+              date: r.date,
+              summary: r.summary,
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      return items
+        .filter((r): r is ReportListItem => r !== null)
+        .sort((a, b) => b.reportId.localeCompare(a.reportId))
+        .slice(0, 20);
+    }
+  );
+
+  ipcMain.handle(
+    "reports-open",
+    async (_event, repo: string, reportId: string): Promise<CompareResponse> => {
+      try {
+        const reportsDir = join(repo, ".kiyas", "reports");
+        const r = await loadReport(reportId, reportsDir);
+        return {
+          ok: true,
+          summary: r.summary,
+          discrepancies: r.discrepancies,
+          reportPath: r.reportPath,
+          reportHtml: await readFile(r.reportPath, "utf-8"),
+          modelLabel: r.model,
+        };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    }
+  );
 
   ipcMain.handle(
     "setup-provider",
