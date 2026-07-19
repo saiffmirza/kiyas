@@ -63,6 +63,12 @@ export type CropResponse =
   | { ok: true; implPng: string; implSize: ImageSize; warning?: string }
   | { ok: false; error: string };
 
+export interface DesktopUpdateInfo {
+  version: string;
+  current: string;
+  url: string;
+}
+
 export interface RepoState {
   repos: string[];
   selectedRepo?: string;
@@ -114,4 +120,8 @@ export interface KiyasApi {
   compareConfirmed: () => Promise<CompareResponse>;
   onProgress: (cb: (event: DesktopProgressEvent) => void) => () => void;
   openReport: (reportPath: string) => Promise<void>;
+  /** Newer desktop release on GitHub, or null when current/offline. */
+  updateCheck: () => Promise<DesktopUpdateInfo | null>;
+  /** Opens the release page found by the last updateCheck. */
+  openUpdate: () => Promise<void>;
 }

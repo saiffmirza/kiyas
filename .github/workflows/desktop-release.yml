@@ -50,10 +50,16 @@ jobs:
       - name: Package .dmg and .zip
         working-directory: apps/desktop
         env:
-          # Ad-hoc signing: no certificate in CI (yet). To sign for real,
-          # remove this and add CSC_LINK / CSC_KEY_PASSWORD secrets.
+          # No certificate in CI: the afterPack hook ad-hoc signs the bundle
+          # (valid seal -> Gatekeeper's bypassable "could not verify" dialog
+          # instead of the dead-end "damaged" one). To sign for real, drop
+          # this and add CSC_LINK / CSC_KEY_PASSWORD secrets.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npx electron-builder --mac
+
+      - name: Verify the packaged app's signature seals
+        run: |
+          codesign --verify --deep --strict --verbose=2 apps/desktop/dist/mac-arm64/Kiyas.app
 
       - name: Create GitHub release
         env:
@@ -61,7 +67,10 @@ jobs:
         run: |
           PREV=$(git tag --list 'desktop-v*' --sort=-v:refname | grep -v "^$GITHUB_REF_NAME$" | head -1 || true)
           {
-            echo "Un-notarized preview build — on first launch, right-click → Open, or run:"
+            echo "Un-notarized build. On first launch macOS says it \"could not verify\" the app:"
+            echo "close that dialog, then open **System Settings → Privacy & Security** and click **Open Anyway**."
+            echo ""
+            echo "Terminal alternative (skips the dialog entirely):"
             echo '`xattr -dr com.apple.quarantine /Applications/Kiyas.app`'
             echo ""
             git log --no-merges --pretty='- %s' ${PREV:+$PREV..}$GITHUB_REF_NAME -- apps/desktop packages/core

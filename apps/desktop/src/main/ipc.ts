@@ -1,4 +1,4 @@
-import { ipcMain, dialog, shell, type BrowserWindow } from "electron";
+import { app, ipcMain, dialog, shell, type BrowserWindow } from "electron";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile, readdir, unlink, writeFile } from "node:fs/promises";
@@ -31,6 +31,7 @@ import type {
   CompareResponse,
   CropResponse,
   DesktopProgressEvent,
+  DesktopUpdateInfo,
   OpenPort,
   ReportListItem,
   RepoState,
@@ -77,6 +78,47 @@ const PROVIDER_SETUP = {
     "command -v codex >/dev/null 2>&1 || npm install -g @openai/codex; codex",
   browsers: `npx playwright@${playwrightVersion} install chromium`,
 } as const;
+
+function isNewerVersion(candidate: string, current: string): boolean {
+  const a = candidate.split(".").map((n) => parseInt(n, 10));
+  const b = current.split(".").map((n) => parseInt(n, 10));
+  for (let i = 0; i < 3; i++) {
+    const diff = (a[i] ?? 0) - (b[i] ?? 0);
+    if (diff !== 0) return diff > 0;
+  }
+  return false;
+}
+
+let pendingUpdateUrl: string | undefined;
+
+async function checkDesktopUpdate(): Promise<DesktopUpdateInfo | null> {
+  try {
+    const res = await fetch(
+      "https://api.github.com/repos/saiffmirza/kiyas/releases?per_page=30",
+      {
+        headers: { Accept: "application/vnd.github+json" },
+        signal: AbortSignal.timeout(4000),
+      }
+    );
+    if (!res.ok) return null;
+    const releases = (await res.json()) as {
+      tag_name: string;
+      html_url: string;
+      draft: boolean;
+      prerelease: boolean;
+    }[];
+    const latest = releases.find(
+      (r) => !r.draft && !r.prerelease && r.tag_name.startsWith("desktop-v")
+    );
+    if (!latest) return null;
+    const version = latest.tag_name.slice("desktop-v".length);
+    if (!isNewerVersion(version, app.getVersion())) return null;
+    pendingUpdateUrl = latest.html_url;
+    return { version, current: app.getVersion(), url: latest.html_url };
+  } catch {
+    return null; // offline or rate-limited — stay quiet
+  }
+}
 
 async function listOpenPorts(): Promise<OpenPort[]> {
   try {
@@ -148,6 +190,12 @@ export function registerIpc(getWin: () => BrowserWindow): void {
   });
 
   ipcMain.handle("ports-list", () => listOpenPorts());
+
+  ipcMain.handle("update-check", () => checkDesktopUpdate());
+
+  ipcMain.handle("update-open", async () => {
+    if (pendingUpdateUrl) await shell.openExternal(pendingUpdateUrl);
+  });
 
   ipcMain.handle(
     "reports-list",
