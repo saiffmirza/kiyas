@@ -1,0 +1,32 @@
+{
+  "name": "@kiyas/desktop",
+  "productName": "Kiyas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kiyas desktop app — point-and-click design fidelity checks for non-technical users.",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "playwright": "^1.49.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@kiyas/core": "*",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.0",
+    "electron-vite": "^3.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}

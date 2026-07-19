@@ -1,14 +1,15 @@
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { z } from "zod";
-import { resolveAuth } from "../auth/index.js";
-import { requireFigmaToken } from "../config.js";
-import { resolveComponent } from "../resolve/component.js";
 import {
+  resolveAuth,
+  requireFigmaToken,
+  resolveComponent,
   defaultReportsDir,
   loadReport,
   runComparison,
-} from "../compare/pipeline.js";
-import { loadSettings } from "../settings.js";
+  loadSettings,
+} from "@kiyas/core";
 
 export const compareInputSchema = z.object({
   figma: z
@@ -172,7 +173,8 @@ export async function handleCompare(input: CompareInput) {
       devServer,
       auth.provider,
       process.cwd(),
-      aiModel
+      aiModel,
+      input.designImage ? resolve(input.designImage) : undefined
     );
     targetUrl = resolved.url;
     selector = resolved.selector ?? selector;

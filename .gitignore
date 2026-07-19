@@ -4,6 +4,7 @@ dist/
 .kiyasrc
 *.tgz
 FUTURE.md
+packages/cli/README.md
 .vscode/
 
 # Eval outputs
@@ -15,3 +16,5 @@ kiyas-report-*
 kiyas-design-*
 kiyas-impl-*
 .kiyas/
+out/
+

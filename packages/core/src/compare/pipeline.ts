@@ -10,6 +10,7 @@ import { generateHtmlReport } from "../report/html.js";
 import { compareImages, parseDiscrepancies, type Discrepancy } from "./index.js";
 import { voteOnFindings } from "./ensemble.js";
 import { buildComparisonPrompt } from "./prompt.js";
+import { readPngSize } from "../utils/png-size.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -24,6 +25,10 @@ export interface RunComparisonParams {
   figmaUrl?: string;
   /** Path to a local design image (e.g. a screenshot). Skips the Figma export. */
   designImage?: string;
+  /** Path to an already-captured implementation screenshot. Skips the Playwright capture. */
+  implImage?: string;
+  /** Figma node metadata to include in the comparison prompt when `designImage` came from a prior Figma export. */
+  figmaMetadata?: FigmaNodeMetadata;
   targetUrl: string;
   model: "claude" | "openai";
   /** Model ID/alias to pin the provider CLI to. */
@@ -45,6 +50,8 @@ export interface RunComparisonParams {
   scale?: number;
   /** Full-page screenshot when no selector (default true). */
   fullPage?: boolean;
+  /** Emulated prefers-color-scheme for the implementation capture. */
+  colorScheme?: "light" | "dark";
   authState?: string;
   threshold: "all" | "medium" | "high";
   format: "html" | "json";
@@ -72,6 +79,7 @@ export interface RunManifest {
   scale: number;
   fullPage: boolean;
   threshold: string;
+  colorScheme?: "light" | "dark";
   provider: "claude" | "openai";
   aiModel?: string;
   runs: number;
@@ -93,6 +101,8 @@ export interface ComparisonResult {
   summary: ComparisonSummary;
   modelLabel: string;
   date: string;
+  /** Set when the design/implementation captures look like different regions. */
+  captureWarning?: string;
 }
 
 export interface PersistedReport extends ComparisonResult {
@@ -136,6 +146,36 @@ function newReportId(): string {
   return `${ts}_${rand}`;
 }
 
+/**
+ * Sanity check that two captures plausibly show the same component.
+ * Returns a human-readable warning when the implementation capture is a tiny
+ * sliver or its aspect ratio is wildly different from the design's — the
+ * classic symptom of a wrong selector (e.g. a bare `h1` instead of the card
+ * that contains it).
+ */
+export async function captureMismatchWarning(
+  designPath: string,
+  implPath: string
+): Promise<string | undefined> {
+  const [design, impl] = await Promise.all([
+    readPngSize(designPath),
+    readPngSize(implPath),
+  ]);
+  if (!design || !impl) return undefined;
+
+  if (impl.width < 80 || impl.height < 80) {
+    return `Implementation capture is only ${impl.width}×${impl.height}px — the selector likely matched a single element inside the component instead of the component itself.`;
+  }
+
+  const ratio =
+    design.width / design.height / (impl.width / impl.height);
+  if (ratio > 2.5 || ratio < 0.4) {
+    return `Capture shapes differ a lot (design ${design.width}×${design.height}, implementation ${impl.width}×${impl.height}) — the screenshot may not cover the same region as the design.`;
+  }
+
+  return undefined;
+}
+
 export function defaultReportsDir(cwd: string = process.cwd()): string {
   return join(cwd, ".kiyas", "reports");
 }
@@ -154,7 +194,7 @@ export async function runComparison(
 
   try {
     let designPath: string;
-    let metadata: FigmaNodeMetadata | undefined;
+    let metadata: FigmaNodeMetadata | undefined = params.figmaMetadata;
 
     if (params.designImage) {
       designPath = resolve(params.designImage);
@@ -177,22 +217,36 @@ export async function runComparison(
       progress({ step: "figma", status: "done" });
     }
 
-    progress({
-      step: "screenshot",
-      status: "start",
-      message: params.targetUrl,
-    });
-    const implPath = await capturePlaywright({
-      url: params.targetUrl,
-      viewport: params.viewport,
-      selector: params.selector,
-      wait: params.wait,
-      scale,
-      fullPage: params.fullPage,
-      authState: params.authState,
-    });
-    tempFiles.push(implPath);
-    progress({ step: "screenshot", status: "done" });
+    let implPath: string;
+    if (params.implImage) {
+      implPath = resolve(params.implImage);
+      if (!existsSync(implPath)) {
+        throw new Error(`Implementation image not found: ${implPath}`);
+      }
+    } else {
+      progress({
+        step: "screenshot",
+        status: "start",
+        message: params.targetUrl,
+      });
+      implPath = await capturePlaywright({
+        url: params.targetUrl,
+        viewport: params.viewport,
+        selector: params.selector,
+        wait: params.wait,
+        scale,
+        fullPage: params.fullPage,
+        colorScheme: params.colorScheme,
+        authState: params.authState,
+      });
+      tempFiles.push(implPath);
+      progress({ step: "screenshot", status: "done" });
+    }
+
+    const captureWarning = await captureMismatchWarning(designPath, implPath);
+    if (captureWarning) {
+      progress({ step: "screenshot", status: "done", message: captureWarning });
+    }
 
     const modelLabel =
       (params.model === "claude" ? "Claude Code" : "Codex") +
@@ -272,6 +326,7 @@ export async function runComparison(
       scale,
       fullPage: params.fullPage ?? !params.selector,
       threshold: params.threshold,
+      colorScheme: params.colorScheme,
       provider: params.model,
       aiModel: params.aiModel,
       runs: runCount,
@@ -281,7 +336,7 @@ export async function runComparison(
         .digest("hex")
         .slice(0, 12),
       metadataIncluded: metadata !== undefined,
-      designSource: params.designImage ? "image" : "figma",
+      designSource: params.figmaUrl ? "figma" : "image",
       resolved: params.resolved,
     };
 
@@ -296,6 +351,7 @@ export async function runComparison(
       summary,
       modelLabel,
       date,
+      captureWarning,
       name: params.name,
       figmaUrl: params.figmaUrl,
       designImage: params.designImage,

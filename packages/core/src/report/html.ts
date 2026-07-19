@@ -13,6 +13,7 @@ async function getLogoBase64(): Promise<string> {
       resolve(dirname(fileURLToPath(import.meta.url)), "..", "assets", "logo.png"),
       resolve(dirname(fileURLToPath(import.meta.url)), "assets", "logo.png"),
       resolve(process.cwd(), "assets", "logo.png"),
+      resolve(process.cwd(), "packages", "cli", "assets", "logo.png"),
     ];
     for (const p of paths) {
       try {

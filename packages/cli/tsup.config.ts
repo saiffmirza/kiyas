@@ -7,6 +7,7 @@ export default defineConfig({
   outDir: "dist",
   clean: true,
   splitting: false,
+  noExternal: ["@kiyas/core"],
   banner: {
     js: "#!/usr/bin/env node",
   },

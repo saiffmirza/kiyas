@@ -380,38 +380,47 @@ kiyas --config ./kiyas.config.json
 ## Project Structure
 
 ```
-kiyas/
-├── src/
-│   ├── index.ts                # CLI entry point (argument parsing, orchestration)
-│   ├── config.ts               # Config file loading + Figma token resolution
-│   ├── auth/
-│   │   ├── index.ts            # Auth resolver (picks best available auth)
-│   │   ├── claude-oauth.ts     # Verify Claude Code CLI is available
-│   │   └── openai-auth.ts      # Verify Codex CLI is available
-│   ├── resolve/
-│   │   └── component.ts        # AI agent: finds component in codebase → URL + selector
-│   ├── capture/
-│   │   ├── figma.ts            # Figma REST API: export frame as PNG + metadata
-│   │   └── playwright.ts       # Playwright: headless screenshot of rendered component
-│   ├── compare/
-│   │   ├── index.ts            # Orchestrator: sends images to vision AI
-│   │   ├── pipeline.ts         # Pure runComparison() + report persistence (shared by CLI + MCP)
-│   │   ├── claude.ts           # Claude comparison via Claude Code CLI
-│   │   ├── openai.ts           # OpenAI comparison via Codex CLI
-│   │   └── prompt.ts           # The comparison prompt (shared across providers)
-│   ├── mcp/
-│   │   ├── server.ts           # MCP server bootstrap (stdio transport)
-│   │   └── tools.ts            # Zod schemas + handlers (compare, get_diff_report, list_issues)
-│   ├── report/
-│   │   └── html.ts             # Generate self-contained HTML report with embedded images
-│   └── utils/
-│       ├── parse-figma-url.ts  # Extract file key + node ID from Figma URL
-│       └── logger.ts           # Minimal logging utility
+kiyas/  (npm workspaces monorepo)
+├── packages/
+│   ├── core/                       # @kiyas/core — the engine (private, bundled into the CLI)
+│   │   └── src/
+│   │       ├── index.ts            # Public API barrel (runComparison, resolveComponent, …)
+│   │       ├── config.ts           # Config file loading + Figma token resolution
+│   │       ├── settings.ts         # Persisted user settings
+│   │       ├── auth/
+│   │       │   ├── index.ts        # Auth resolver (picks best available auth)
+│   │       │   ├── claude-oauth.ts # Verify Claude Code CLI is available
+│   │       │   └── openai-auth.ts  # Verify Codex CLI is available
+│   │       ├── resolve/
+│   │       │   └── component.ts    # AI agent: finds component in codebase → URL + selector
+│   │       ├── capture/
+│   │       │   ├── figma.ts        # Figma REST API: export frame as PNG + metadata
+│   │       │   └── playwright.ts   # Playwright: headless screenshot of rendered component
+│   │       ├── compare/
+│   │       │   ├── index.ts        # Orchestrator: sends images to vision AI
+│   │       │   ├── pipeline.ts     # Pure runComparison() + report persistence (shared by CLI + MCP)
+│   │       │   ├── claude.ts       # Claude comparison via Claude Code CLI
+│   │       │   ├── openai.ts       # OpenAI comparison via Codex CLI
+│   │       │   └── prompt.ts       # The comparison prompt (shared across providers)
+│   │       ├── report/
+│   │       │   └── html.ts         # Generate self-contained HTML report with embedded images
+│   │       └── utils/
+│   │           ├── parse-figma-url.ts  # Extract file key + node ID from Figma URL
+│   │           └── logger.ts       # Minimal logging utility
+│   └── cli/                        # kiyas-cli — the published npm package
+│       ├── src/
+│       │   ├── index.ts            # CLI entry point (argument parsing, orchestration)
+│       │   ├── setup.ts            # Interactive first-time setup
+│       │   └── mcp/
+│       │       ├── server.ts       # MCP server bootstrap (stdio transport)
+│       │       └── tools.ts        # Zod schemas + handlers (compare, get_diff_report, list_issues)
+│       ├── package.json
+│       └── tsup.config.ts
+├── eval/                           # Golden eval set + scoring harness
 ├── .env.example
 ├── .kiyasrc.example
-├── package.json
-├── tsconfig.json
-└── tsup.config.ts
+├── package.json                    # Workspace root
+└── tsconfig.json
 ```
 
 ---

@@ -4,10 +4,10 @@ import type { AddressInfo } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { capturePlaywright } from "../src/capture/playwright.js";
-import { runComparison } from "../src/compare/pipeline.js";
-import type { Discrepancy } from "../src/compare/index.js";
-import { loadSettings } from "../src/settings.js";
+import { capturePlaywright } from "../packages/core/src/capture/playwright.js";
+import { runComparison } from "../packages/core/src/compare/pipeline.js";
+import type { Discrepancy } from "../packages/core/src/compare/index.js";
+import { loadSettings } from "../packages/core/src/settings.js";
 import { aggregate, scorePair, type Golden, type PairScore } from "./score.js";
 
 interface Mutation {

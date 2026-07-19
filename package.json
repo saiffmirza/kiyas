@@ -1,52 +1,22 @@
 {
-  "name": "kiyas-cli",
-  "version": "1.2.2",
-  "mcpName": "io.github.saiffmirza/kiyas",
-  "description": "MCP server and CLI for AI-powered design fidelity — compare Figma designs (or screenshots) against rendered UI. Measured on a golden eval set: 90% mutation recall, zero false positives on clean pairs. Uses your Claude Code or Codex subscription — no API keys.",
+  "name": "kiyas",
+  "private": true,
   "type": "module",
-  "bin": {
-    "kiyas": "dist/index.js"
-  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "start": "node dist/index.js",
+    "build": "npm run build -w kiyas-cli",
+    "dev": "npm run dev -w kiyas-cli",
+    "desktop": "npm run dev -w @kiyas/desktop",
+    "typecheck": "npm run typecheck -w @kiyas/core && npm run typecheck -w kiyas-cli",
     "eval": "esbuild eval/run.ts --bundle --format=esm --platform=node --packages=external --outfile=eval/dist/run.mjs && node eval/dist/run.mjs",
-    "test": "esbuild eval/matcher.test.ts --bundle --format=esm --platform=node --packages=external --outfile=eval/dist/matcher.test.mjs && node --test eval/dist/matcher.test.mjs",
-    "postinstall": "node scripts/postinstall.js"
-  },
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "figma",
-    "design",
-    "design-system",
-    "qa",
-    "cli",
-    "ai",
-    "vision",
-    "claude",
-    "cursor",
-    "codex"
-  ],
-  "license": "MIT",
-  "files": [
-    "dist",
-    "assets",
-    "scripts",
-    "README.md"
-  ],
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "chalk": "^5.4.1",
-    "commander": "^12.1.0",
-    "dotenv": "^17.3.1",
-    "ora": "^8.1.1",
-    "playwright": "^1.49.0",
-    "zod": "^4.3.6"
+    "test": "esbuild eval/matcher.test.ts --bundle --format=esm --platform=node --packages=external --outfile=eval/dist/matcher.test.mjs && node --test eval/dist/matcher.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",
+    "esbuild": "^0.24.0",
     "tsup": "^8.3.0",
     "typescript": "^5.7.0"
   }

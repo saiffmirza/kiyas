@@ -11,6 +11,8 @@ export interface PlaywrightCaptureOptions {
   scale?: number;
   /** Capture the full scrollable page instead of just the viewport. Default true when no selector is given. */
   fullPage?: boolean;
+  /** Emulated prefers-color-scheme for the capture. */
+  colorScheme?: "light" | "dark";
   /**
    * Path to a Playwright storageState JSON file (cookies + localStorage).
    * Lets kiyas screenshot authenticated views the same way your tests do.
@@ -46,6 +48,7 @@ export async function capturePlaywright(
       reducedMotion: "reduce",
       timezoneId: "UTC",
       locale: "en-US",
+      colorScheme: options.colorScheme,
       storageState,
     });
     const page = await context.newPage();

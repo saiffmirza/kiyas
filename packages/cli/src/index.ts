@@ -3,12 +3,18 @@ import { Command } from "commander";
 import chalk from "chalk";
 import ora, { type Ora } from "ora";
 import { resolve } from "node:path";
-import { resolveAuth } from "./auth/index.js";
-import { ensureFigmaToken, loadConfigFile } from "./config.js";
-import { resolveComponent } from "./resolve/component.js";
-import { runComparison, type ProgressEvent } from "./compare/pipeline.js";
-import { loadSettings, saveSetting, getAllSettings } from "./settings.js";
-import { log } from "./utils/logger.js";
+import {
+  resolveAuth,
+  ensureFigmaToken,
+  loadConfigFile,
+  resolveComponent,
+  runComparison,
+  type ProgressEvent,
+  loadSettings,
+  saveSetting,
+  getAllSettings,
+  log,
+} from "@kiyas/core";
 import { runSetup } from "./setup.js";
 import { VERSION } from "./version.js";
 
@@ -135,6 +141,7 @@ program
     1
   )
   .option("--selector <css>", "CSS selector to screenshot a specific element")
+  .option("--dark", "Capture the implementation in dark mode (prefers-color-scheme: dark)")
   .option("--wait <ms>", "Time in ms to wait before screenshot", parseInt)
   .option(
     "--auth-state <path>",
@@ -168,6 +175,7 @@ interface CLIOptions {
   fullPage: boolean;
   runs: number;
   selector?: string;
+  dark?: boolean;
   wait?: number;
   authState?: string;
   config?: string;
@@ -233,7 +241,8 @@ async function run(opts: CLIOptions) {
       opts.devServer,
       auth.provider,
       process.cwd(),
-      aiModel
+      aiModel,
+      opts.design ? resolve(opts.design) : undefined
     );
 
     resolveSpinner.succeed(
@@ -267,6 +276,7 @@ async function run(opts: CLIOptions) {
     scale: opts.scale,
     fullPage: opts.fullPage,
     selector,
+    colorScheme: opts.dark ? "dark" : undefined,
     wait: opts.wait,
     authState: opts.authState,
     threshold: opts.threshold,
@@ -309,7 +319,8 @@ async function runBatchMode(opts: CLIOptions) {
         opts.devServer,
         auth.provider,
         process.cwd(),
-        aiModel
+        aiModel,
+        comparison.design ? resolve(comparison.design) : undefined
       );
 
       resolveSpinner.succeed(
@@ -337,6 +348,7 @@ async function runBatchMode(opts: CLIOptions) {
       scale: opts.scale,
       fullPage: opts.fullPage,
       selector,
+      colorScheme: opts.dark ? "dark" : undefined,
       wait: comparison.wait ?? opts.wait,
       authState: comparison.authState ?? config.authState ?? opts.authState,
       threshold: comparison.threshold ?? opts.threshold,
@@ -366,6 +378,7 @@ interface ComparisonParams {
   scale?: number;
   fullPage?: boolean;
   selector?: string;
+  colorScheme?: "light" | "dark";
   wait?: number;
   authState?: string;
   threshold: "all" | "medium" | "high";
@@ -394,6 +407,10 @@ async function runSingleComparison(params: ComparisonParams) {
 
   // Print summary to terminal
   const { summary } = result;
+
+  if (result.captureWarning) {
+    log.warn(result.captureWarning);
+  }
   console.log("");
   log.success(
     `Found ${chalk.bold(String(summary.total))} discrepancies` +

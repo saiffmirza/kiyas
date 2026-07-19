@@ -24,9 +24,10 @@ export async function resolveComponent(
   devServerUrl: string,
   provider: "claude" | "openai",
   cwd: string,
-  modelId?: string
+  modelId?: string,
+  designImage?: string
 ): Promise<ResolvedComponent> {
-  const prompt = buildResolverPrompt(description, devServerUrl);
+  const prompt = buildResolverPrompt(description, devServerUrl, designImage);
 
   const raw =
     provider === "claude"
@@ -38,13 +39,21 @@ export async function resolveComponent(
 
 function buildResolverPrompt(
   description: string,
-  devServerUrl: string
+  devServerUrl: string,
+  designImage?: string
 ): string {
+  const designBlock = designImage
+    ? `\nA screenshot of the DESIGN being compared is at: ${designImage}
+Read this image FIRST. The selector you return must isolate a DOM region that
+visually covers everything shown in that design — every heading, button, badge,
+and decoration in the image must fall inside the selected element.\n`
+    : "";
+
   return `You are a codebase navigator. A user wants to find and screenshot a UI component in this project.
 
 Their description: "${description}"
 Dev server running at: ${devServerUrl}
-
+${designBlock}
 Your job:
 1. Search the project files to find the component matching this description
 2. Determine the route/URL on the dev server where this component is visible
@@ -54,6 +63,16 @@ Think step by step:
 - Look for component files, page files, route definitions, and Storybook stories
 - Check the project's routing setup (Next.js pages/app dir, React Router, Vue Router, etc.)
 - If it's a Storybook project, find the story ID for the component
+
+Selector rules (important):
+- Return the SMALLEST stable container that encloses the ENTIRE component — its
+  wrapper <section>/<article>/<div>, not an element inside it.
+- NEVER return a bare text-bearing tag (h1, h2, p, span, a, button) unless the
+  described component is literally just that one element. Matching the
+  component's title text is not the same as matching the component.
+- Prefer, in order: an id (#hero), a data attribute ([data-testid=…]), a
+  distinctive class from the source, a semantic landmark (main > section:first-child).
+- If unsure between two candidates, pick the larger container.
 
 Respond ONLY with valid JSON (no markdown fences, no commentary):
 {

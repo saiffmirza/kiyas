@@ -2,12 +2,14 @@ import chalk from "chalk";
 import { resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { readFile, writeFile, appendFile } from "node:fs/promises";
-import { resolveClaudeAuth } from "./auth/claude-oauth.js";
-import { resolveOpenAIAuth } from "./auth/openai-auth.js";
-import { resolveFigmaToken } from "./config.js";
-import { saveSetting } from "./settings.js";
-import { ask } from "./utils/prompt.js";
-import { log } from "./utils/logger.js";
+import {
+  resolveClaudeAuth,
+  resolveOpenAIAuth,
+  resolveFigmaToken,
+  saveSetting,
+  ask,
+  log,
+} from "@kiyas/core";
 
 export async function runSetup() {
   console.log(

@@ -1,0 +1,36 @@
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
+import type {
+  CompareRequest,
+  DesktopProgressEvent,
+  KiyasApi,
+} from "../shared/types.js";
+
+const api: KiyasApi = {
+  doctor: () => ipcRenderer.invoke("doctor"),
+  reposLoad: () => ipcRenderer.invoke("repos-load"),
+  reposAdd: () => ipcRenderer.invoke("repos-add"),
+  reposRemove: (path: string) => ipcRenderer.invoke("repos-remove", path),
+  reposSelect: (path: string) => ipcRenderer.invoke("repos-select", path),
+  portsList: () => ipcRenderer.invoke("ports-list"),
+  openTerminal: (cwd?: string) => ipcRenderer.invoke("open-terminal", cwd),
+  setupProvider: (provider: "claude" | "codex") =>
+    ipcRenderer.invoke("setup-provider", provider),
+  saveFigmaToken: (token: string) =>
+    ipcRenderer.invoke("save-figma-token", token),
+  openFigmaSettings: () => ipcRenderer.invoke("open-figma-settings"),
+  pickRepo: () => ipcRenderer.invoke("pick-repo"),
+  pickImage: () => ipcRenderer.invoke("pick-image"),
+  capture: (params: CompareRequest) => ipcRenderer.invoke("capture", params),
+  cropImpl: () => ipcRenderer.invoke("crop-impl"),
+  compareConfirmed: () => ipcRenderer.invoke("compare-confirmed"),
+  openReport: (reportPath: string) =>
+    ipcRenderer.invoke("open-report", reportPath),
+  onProgress: (cb: (event: DesktopProgressEvent) => void) => {
+    const listener = (_event: IpcRendererEvent, ev: DesktopProgressEvent) =>
+      cb(ev);
+    ipcRenderer.on("compare-progress", listener);
+    return () => ipcRenderer.removeListener("compare-progress", listener);
+  },
+};
+
+contextBridge.exposeInMainWorld("kiyas", api);
