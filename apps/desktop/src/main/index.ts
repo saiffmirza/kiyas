@@ -69,7 +69,12 @@ function createWindow(): BrowserWindow {
 
 app.whenReady().then(async () => {
   await fixPath();
-  if (process.platform === "darwin") app.dock.setIcon(icon);
+  // Packaged builds get the dock icon from the bundle's compiled assets
+  // (Assets.car / icns); a runtime-set bitmap would downgrade it to the
+  // legacy rendering. Dev mode sets the badged DEV tile explicitly.
+  if (process.platform === "darwin" && !app.isPackaged) {
+    app.dock.setIcon(icon);
+  }
   let win = createWindow();
   const getWin = () => win;
   registerIpc(getWin);

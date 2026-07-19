@@ -5,6 +5,7 @@ directories:
   output: dist
 files:
   - out/**
+  - resources/**
 asarUnpack:
   - "**/node_modules/node-pty/**"
 mac:
