@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseDiscrepancies, type Discrepancy } from "./index.js";
 import { extractJson } from "./extract-json.js";
+import { cliFailure } from "./cli-error.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -42,9 +43,10 @@ export async function compareWithClaude(
       args.push("--model", modelId);
     }
 
+    const timeout = 120_000;
     const promise = execFileAsync("claude", args, {
       cwd,
-      timeout: 120_000,
+      timeout,
       maxBuffer: 10 * 1024 * 1024,
     });
     // Close stdin so the CLI doesn't wait 3s for piped input
@@ -54,10 +56,7 @@ export async function compareWithClaude(
     try {
       ({ stdout } = await promise);
     } catch (err) {
-      const e = err as Error & { stdout?: string; stderr?: string };
-      throw new Error(
-        `claude CLI failed: ${(e.stdout || e.stderr || e.message).slice(0, 500)}`
-      );
+      throw cliFailure("claude", err, timeout);
     }
 
     return parseDiscrepancies(extractJson(stdout, "array"));

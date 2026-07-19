@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { dirname, join } from "node:path";
@@ -111,13 +111,13 @@ let done = 0;
 try {
   for (const [fixture, spec] of Object.entries(selected)) {
     const viewport = spec.viewport ?? args.viewport!;
-    const baselineTmp = await capturePlaywright({
+    const baseline = join(resultsDir, `${fixture}-baseline.png`);
+    await capturePlaywright({
       url: `${base}/${fixture}.html`,
+      outputPath: baseline,
       viewport,
       scale,
     });
-    const baseline = join(resultsDir, `${fixture}-baseline.png`);
-    await copyFile(baselineTmp, baseline);
 
     const pairs: Array<[string, Mutation | undefined]> = [
       ...Object.entries(spec.mutations),

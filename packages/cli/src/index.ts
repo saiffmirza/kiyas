@@ -14,9 +14,11 @@ import {
   saveSetting,
   getAllSettings,
   log,
+  detectDevServer,
+  checkForUpdate,
+  VERSION,
 } from "@kiyas/core";
 import { runSetup } from "./setup.js";
-import { VERSION } from "./version.js";
 
 const settings = loadSettings();
 const program = new Command();
@@ -103,7 +105,7 @@ program
   .option("--figma <url>", "Figma frame/component URL")
   .option(
     "--design <path>",
-    "Path to a design image (e.g. a screenshot) to compare against instead of a Figma URL"
+    "Local path or URL of a design image (e.g. a screenshot) to compare against instead of a Figma URL"
   )
   .option(
     "--component <description>",
@@ -115,8 +117,8 @@ program
   )
   .option(
     "--dev-server <url>",
-    "Dev server base URL",
-    settings.devServer ?? process.env.DEV_SERVER_URL ?? "http://localhost:3000"
+    "Dev server base URL (default: auto-detect common ports, else http://localhost:3000)",
+    settings.devServer ?? process.env.DEV_SERVER_URL
   )
   .option(
     "--model <provider>",
@@ -151,6 +153,7 @@ program
   .option("--threshold <level>", "Severity threshold: all, medium, high", settings.threshold ?? "all")
   .option("--format <type>", "Output format: html (default) or json", settings.format ?? "html")
   .action(async (opts) => {
+    checkForUpdate();
     try {
       await run(opts);
     } catch (err: unknown) {
@@ -167,7 +170,7 @@ interface CLIOptions {
   design?: string;
   component?: string;
   target?: string;
-  devServer: string;
+  devServer?: string;
   model: "claude" | "openai";
   output?: string;
   viewport: string;
@@ -238,7 +241,7 @@ async function run(opts: CLIOptions) {
 
     const resolved = await resolveComponent(
       opts.component,
-      opts.devServer,
+      opts.devServer ?? (await detectDevServer()),
       auth.provider,
       process.cwd(),
       aiModel,
@@ -316,7 +319,7 @@ async function runBatchMode(opts: CLIOptions) {
 
       const resolved = await resolveComponent(
         targetUrl,
-        opts.devServer,
+        opts.devServer ?? (await detectDevServer()),
         auth.provider,
         process.cwd(),
         aiModel,

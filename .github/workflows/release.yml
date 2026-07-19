@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  id-token: write # npm trusted publishing + MCP registry OIDC
+  contents: write # GitHub release creation
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for commit-based release notes
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing requires npm >= 11.5.1
+      - run: npm install -g npm@latest
+
+      - run: npm ci
+
+      - name: Verify versions match the tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          node -e "
+            const { readFileSync } = require('node:fs');
+            const tag = process.argv[1];
+            const pkg = JSON.parse(readFileSync('packages/cli/package.json', 'utf-8')).version;
+            const server = JSON.parse(readFileSync('server.json', 'utf-8'));
+            const versionTs = readFileSync('packages/core/src/version.ts', 'utf-8').match(/\"([^\"]+)\"/)[1];
+            const all = { 'packages/cli/package.json': pkg, 'server.json': server.version, 'server.json packages[0]': server.packages[0].version, 'packages/core/src/version.ts': versionTs };
+            const bad = Object.entries(all).filter(([, v]) => v !== tag);
+            if (bad.length) {
+              console.error('Version mismatch with tag v' + tag + ':', Object.fromEntries(bad));
+              process.exit(1);
+            }
+            console.log('All versions match v' + tag);
+          " "$TAG"
+
+      - run: npm run build
+
+      - run: npm test
+
+      - name: Publish to npm
+        run: npm publish -w kiyas-cli
+
+      - name: Publish to MCP Registry
+        run: |
+          curl -sL "$(curl -s https://api.github.com/repos/modelcontextprotocol/registry/releases/latest | grep -o 'https://[^"]*mcp-publisher[^"]*linux_amd64.tar.gz' | head -1)" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # --generate-notes only surfaces merged PRs; commits land on main
+        # directly, so build the notes from commit subjects instead.
+        run: |
+          PREV=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          {
+            git log --no-merges --pretty='- %s' ${PREV:+$PREV..}$GITHUB_REF_NAME
+            echo ""
+            [ -n "$PREV" ] && echo "**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV}...${GITHUB_REF_NAME}"
+          } > /tmp/notes.md
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file /tmp/notes.md

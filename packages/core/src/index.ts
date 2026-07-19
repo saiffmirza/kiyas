@@ -49,3 +49,6 @@ export { generateHtmlReport, type HtmlReportOptions } from "./report/html.js";
 export { parseFigmaUrl, type FigmaUrlParts } from "./utils/parse-figma-url.js";
 export { log } from "./utils/logger.js";
 export { ask } from "./utils/prompt.js";
+export { detectDevServer } from "./utils/dev-server.js";
+export { checkForUpdate } from "./utils/update-check.js";
+export { VERSION } from "./version.js";

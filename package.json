@@ -12,7 +12,8 @@
     "desktop": "npm run dev -w @kiyas/desktop",
     "typecheck": "npm run typecheck -w @kiyas/core && npm run typecheck -w kiyas-cli",
     "eval": "esbuild eval/run.ts --bundle --format=esm --platform=node --packages=external --outfile=eval/dist/run.mjs && node eval/dist/run.mjs",
-    "test": "esbuild eval/matcher.test.ts --bundle --format=esm --platform=node --packages=external --outfile=eval/dist/matcher.test.mjs && node --test eval/dist/matcher.test.mjs"
+    "test": "esbuild eval/matcher.test.ts --bundle --format=esm --platform=node --packages=external --outfile=eval/dist/matcher.test.mjs && node --test eval/dist/matcher.test.mjs",
+    "bump": "node packages/cli/scripts/bump.js"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",

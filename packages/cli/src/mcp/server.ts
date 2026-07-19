@@ -5,7 +5,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { VERSION } from "../version.js";
+import { VERSION, checkForUpdate } from "@kiyas/core";
 import {
   compareInputSchema,
   getDiffReportInputSchema,
@@ -21,8 +21,10 @@ const TOOLS = [
     description:
       "Compare a design against a rendered implementation and return discrepancies " +
       "(measured on kiyas's golden eval set: 90% mutation recall, zero false positives on identical pairs). " +
-      "Provide `figma` (frame URL) or `designImage` (local screenshot path), plus either `target` (a URL) " +
+      "Provide `figma` (frame URL) or `designImage` (local path or URL of a design screenshot), plus either `target` (a URL) " +
       "or `component` (natural-language description; kiyas finds it in the codebase). " +
+      "No Figma token needed for `designImage` — if a Figma MCP server is connected, export the frame " +
+      "as an image with its screenshot tool and pass that here. " +
       "Returns a reportId you can pass to get_diff_report or list_issues.",
     inputSchema: z.toJSONSchema(compareInputSchema),
   },
@@ -83,6 +85,7 @@ export async function startMcpServer(): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+  checkForUpdate();
 }
 
 async function dispatch(name: string, args: Record<string, unknown>) {

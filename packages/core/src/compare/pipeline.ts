@@ -11,6 +11,7 @@ import { compareImages, parseDiscrepancies, type Discrepancy } from "./index.js"
 import { voteOnFindings } from "./ensemble.js";
 import { buildComparisonPrompt } from "./prompt.js";
 import { readPngSize } from "../utils/png-size.js";
+import { VERSION } from "../version.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -23,7 +24,7 @@ export interface ProgressEvent {
 export interface RunComparisonParams {
   /** Figma frame URL. Provide either this or `designImage`. */
   figmaUrl?: string;
-  /** Path to a local design image (e.g. a screenshot). Skips the Figma export. */
+  /** Local path, http(s) URL, or base64 data: URI of a design image. Skips the Figma export. */
   designImage?: string;
   /** Path to an already-captured implementation screenshot. Skips the Playwright capture. */
   implImage?: string;
@@ -83,6 +84,7 @@ export interface RunManifest {
   provider: "claude" | "openai";
   aiModel?: string;
   runs: number;
+  kiyasVersion: string;
   cliVersion?: string;
   promptVersion: string;
   metadataIncluded: boolean;
@@ -180,6 +182,22 @@ export function defaultReportsDir(cwd: string = process.cwd()): string {
   return join(cwd, ".kiyas", "reports");
 }
 
+// AI CLI subprocesses fail transiently (rate limits, API blips); one retry
+// absorbs most of those without redoing the capture work. A missing CLI
+// can't succeed on retry, so fail fast there.
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/not found on PATH/.test(message)) {
+      throw err;
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+    return fn();
+  }
+}
+
 export async function runComparison(
   params: RunComparisonParams
 ): Promise<PersistedReport> {
@@ -197,9 +215,33 @@ export async function runComparison(
     let metadata: FigmaNodeMetadata | undefined = params.figmaMetadata;
 
     if (params.designImage) {
-      designPath = resolve(params.designImage);
-      if (!existsSync(designPath)) {
-        throw new Error(`Design image not found: ${designPath}`);
+      if (params.designImage.startsWith("data:")) {
+        const match = params.designImage.match(
+          /^data:image\/[\w.+-]+;base64,(.+)$/s
+        );
+        if (!match) {
+          throw new Error(
+            "Unsupported data: URI for design image — expected base64-encoded image data (data:image/...;base64,...)."
+          );
+        }
+        designPath = join(reportDir, "design-source.png");
+        await writeFile(designPath, Buffer.from(match[1], "base64"));
+        tempFiles.push(designPath);
+      } else if (/^https?:\/\//i.test(params.designImage)) {
+        const res = await fetch(params.designImage);
+        if (!res.ok) {
+          throw new Error(
+            `Failed to download design image (HTTP ${res.status}): ${params.designImage}`
+          );
+        }
+        designPath = join(reportDir, "design-source.png");
+        await writeFile(designPath, Buffer.from(await res.arrayBuffer()));
+        tempFiles.push(designPath);
+      } else {
+        designPath = resolve(params.designImage);
+        if (!existsSync(designPath)) {
+          throw new Error(`Design image not found: ${designPath}`);
+        }
       }
     } else {
       if (!params.figmaUrl || !params.figmaToken) {
@@ -219,10 +261,12 @@ export async function runComparison(
 
     let implPath: string;
     if (params.implImage) {
-      implPath = resolve(params.implImage);
-      if (!existsSync(implPath)) {
-        throw new Error(`Implementation image not found: ${implPath}`);
+      const source = resolve(params.implImage);
+      if (!existsSync(source)) {
+        throw new Error(`Implementation image not found: ${source}`);
       }
+      implPath = join(reportDir, "impl.png");
+      await copyFile(source, implPath);
     } else {
       progress({
         step: "screenshot",
@@ -231,6 +275,7 @@ export async function runComparison(
       });
       implPath = await capturePlaywright({
         url: params.targetUrl,
+        outputPath: join(reportDir, "impl.png"),
         viewport: params.viewport,
         selector: params.selector,
         wait: params.wait,
@@ -239,7 +284,6 @@ export async function runComparison(
         colorScheme: params.colorScheme,
         authState: params.authState,
       });
-      tempFiles.push(implPath);
       progress({ step: "screenshot", status: "done" });
     }
 
@@ -264,10 +308,12 @@ export async function runComparison(
         metadata,
       };
       if (runCount === 1) {
-        discrepancies = await compareImages(compareOptions);
+        discrepancies = await withRetry(() => compareImages(compareOptions));
       } else {
         const results = await Promise.all(
-          Array.from({ length: runCount }, () => compareImages(compareOptions))
+          Array.from({ length: runCount }, () =>
+            withRetry(() => compareImages(compareOptions))
+          )
         );
         discrepancies = voteOnFindings(results);
       }
@@ -282,9 +328,8 @@ export async function runComparison(
     }
 
     const designDest = join(reportDir, "design.png");
-    const implDest = join(reportDir, "impl.png");
+    const implDest = implPath;
     await copyFile(designPath, designDest);
-    await copyFile(implPath, implDest);
 
     const reportPath = join(reportDir, "report.html");
     const jsonPath = join(reportDir, "discrepancies.json");
@@ -330,6 +375,7 @@ export async function runComparison(
       provider: params.model,
       aiModel: params.aiModel,
       runs: runCount,
+      kiyasVersion: VERSION,
       cliVersion: await cliVersion(params.model),
       promptVersion: createHash("sha256")
         .update(buildComparisonPrompt())
@@ -354,7 +400,9 @@ export async function runComparison(
       captureWarning,
       name: params.name,
       figmaUrl: params.figmaUrl,
-      designImage: params.designImage,
+      designImage: params.designImage?.startsWith("data:")
+        ? designDest
+        : params.designImage,
       targetUrl: params.targetUrl,
       manifest,
     };
@@ -408,6 +456,15 @@ export async function runComparison(
     }
 
     return persisted;
+  } catch (err) {
+    const detail =
+      err instanceof Error ? (err.stack ?? err.message) : String(err);
+    try {
+      await writeFile(join(reportDir, "error.log"), `${detail}\n`, "utf-8");
+    } catch {
+      // best-effort diagnostics
+    }
+    throw err;
   } finally {
     for (const f of tempFiles) {
       try {

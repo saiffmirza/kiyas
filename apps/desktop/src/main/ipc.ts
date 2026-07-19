@@ -358,6 +358,10 @@ export function registerIpc(win: BrowserWindow): void {
         const captureOnce = (colorScheme?: "light" | "dark") =>
           capturePlaywright({
             url: targetUrl,
+            outputPath: join(
+              tmpdir(),
+              `kiyas-capture-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`
+            ),
             viewport: params.viewport,
             selector,
             scale: captureScale(params.viewport, selector),
