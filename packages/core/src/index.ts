@@ -44,7 +44,12 @@ export {
   tokenOverlap,
 } from "./compare/finding-key.js";
 export { captureFigma, type FigmaCapture, type FigmaNodeMetadata } from "./capture/figma.js";
-export { capturePlaywright, type PlaywrightCaptureOptions } from "./capture/playwright.js";
+export {
+  capturePlaywright,
+  capturePlaywrightDetailed,
+  type PlaywrightCaptureOptions,
+  type PlaywrightCaptureResult,
+} from "./capture/playwright.js";
 export { generateHtmlReport, type HtmlReportOptions } from "./report/html.js";
 export { parseFigmaUrl, type FigmaUrlParts } from "./utils/parse-figma-url.js";
 export { log } from "./utils/logger.js";

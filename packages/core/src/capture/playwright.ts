@@ -21,11 +21,29 @@ export interface PlaywrightCaptureOptions {
    * a global-setup test that calls `context.storageState({ path })`.
    */
   authState?: string;
+  /**
+   * With `selector`: also capture the full scrollable page to this path and
+   * report the element's bounding box in full-page image coordinates.
+   */
+  fullPagePath?: string;
+}
+
+export interface PlaywrightCaptureResult {
+  imagePath: string;
+  fullPagePath?: string;
+  /** Element position in full-page image pixels (already multiplied by scale). */
+  elementBox?: { x: number; y: number; width: number; height: number };
 }
 
 export async function capturePlaywright(
   options: PlaywrightCaptureOptions
 ): Promise<string> {
+  return (await capturePlaywrightDetailed(options)).imagePath;
+}
+
+export async function capturePlaywrightDetailed(
+  options: PlaywrightCaptureOptions
+): Promise<PlaywrightCaptureResult> {
   const { chromium } = await import("playwright");
 
   const [width, height] = parseViewport(options.viewport ?? "1280x720");
@@ -79,6 +97,30 @@ export async function capturePlaywright(
       await page.waitForTimeout(options.wait);
     }
 
+    // The style tag above only kills CSS animations. JS-driven entrance
+    // animations (Framer Motion et al.) still run, and capturing mid-flight
+    // reports phantom offsets. Sample element geometry until two consecutive
+    // reads match, so the screenshot sees the settled layout.
+    const snapshot = () =>
+      page.evaluate(() => {
+        const els = document.querySelectorAll("body *");
+        const step = Math.max(1, Math.floor(els.length / 200));
+        let sig = "";
+        for (let i = 0; i < els.length; i += step) {
+          const el = els[i] as HTMLElement;
+          const r = el.getBoundingClientRect();
+          sig += `${Math.round(r.top * 4)},${Math.round(r.left * 4)},${getComputedStyle(el).opacity};`;
+        }
+        return sig;
+      });
+    let prev = await snapshot();
+    for (let i = 0; i < 12; i++) {
+      await page.waitForTimeout(250);
+      const next = await snapshot();
+      if (next === prev) break;
+      prev = next;
+    }
+
     const imagePath = options.outputPath;
     const screenshotOptions = {
       path: imagePath,
@@ -93,15 +135,42 @@ export async function capturePlaywright(
           `Selector "${options.selector}" not found on page ${options.url}`
         );
       }
+      let fullPagePath: string | undefined;
+      let elementBox: PlaywrightCaptureResult["elementBox"];
+      if (options.fullPagePath) {
+        // Full-page shot and bounding box must come before element.screenshot,
+        // which scrolls the element into view.
+        await page.screenshot({
+          ...screenshotOptions,
+          path: options.fullPagePath,
+          fullPage: true,
+        });
+        const box = await element.boundingBox();
+        if (box) {
+          const scroll = await page.evaluate(() => ({
+            x: window.scrollX,
+            y: window.scrollY,
+          }));
+          const scale = options.scale ?? 1;
+          elementBox = {
+            x: (box.x + scroll.x) * scale,
+            y: (box.y + scroll.y) * scale,
+            width: box.width * scale,
+            height: box.height * scale,
+          };
+          fullPagePath = options.fullPagePath;
+        }
+      }
       await element.screenshot(screenshotOptions);
-    } else {
-      await page.screenshot({
-        ...screenshotOptions,
-        fullPage: options.fullPage ?? true,
-      });
+      return { imagePath, fullPagePath, elementBox };
     }
 
-    return imagePath;
+    await page.screenshot({
+      ...screenshotOptions,
+      fullPage: options.fullPage ?? true,
+    });
+
+    return { imagePath };
   } finally {
     await browser.close();
   }

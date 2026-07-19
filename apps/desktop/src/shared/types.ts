@@ -77,6 +77,8 @@ export interface ReportListItem {
   name?: string;
   date: string;
   summary: ComparisonSummary;
+  /** Saved inputs to run the same comparison again; absent when the report predates them. */
+  rerun?: Omit<CompareRequest, "repo">;
 }
 
 export interface KiyasApi {

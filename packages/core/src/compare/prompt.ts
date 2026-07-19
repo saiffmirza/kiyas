@@ -35,6 +35,12 @@ Also note:
 - Any elements present in the design but missing from the implementation
 - Any elements present in the implementation but not in the design
 - Overall layout/alignment differences
+
+The two images come from different capture pipelines (a design export or OS screenshot vs. a headless-browser screenshot), so some pixel-level variation is inherent and must NOT be reported:
+- Anti-aliasing, sub-pixel text rendering, and glyph weight/sharpness differences at identical font sizes
+- Slight color rendition shifts from color profiles or compression (report a color only when it is clearly a *different chosen color*, not a slightly different rendition of the same one)
+- Sub-5px positional jitter between otherwise matching elements
+Only report discrepancies a developer could act on with a CSS change.
 ${metadataContext}${scaleContext}
 Format your response as a JSON array of objects with the fields: element, property, expected, actual, severity, region (optional).
 

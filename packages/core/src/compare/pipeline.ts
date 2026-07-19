@@ -10,6 +10,7 @@ import { generateHtmlReport } from "../report/html.js";
 import { compareImages, parseDiscrepancies, type Discrepancy } from "./index.js";
 import { voteOnFindings } from "./ensemble.js";
 import { buildComparisonPrompt } from "./prompt.js";
+import { generateComparisonName } from "./name.js";
 import { readPngSize } from "../utils/png-size.js";
 import { VERSION } from "../version.js";
 
@@ -121,6 +122,41 @@ function defaultScale(viewport: string, selector?: string): number {
   if (!match) return 1;
   const longSide = Math.max(parseInt(match[1], 10), parseInt(match[2], 10));
   return longSide <= 1000 ? 2 : 1;
+}
+
+/**
+ * macOS screenshots are tagged Display P3; the comparison model reads raw
+ * pixel values, so the same color decodes differently between a P3 design and
+ * an sRGB browser capture. Convert to sRGB where the OS tooling exists.
+ */
+async function normalizeToSrgb(
+  path: string,
+  outDir: string,
+  tempFiles: string[]
+): Promise<string> {
+  if (process.platform !== "darwin") return path;
+  try {
+    const { stdout } = await execFileAsync("sips", ["-g", "profile", path], {
+      timeout: 5000,
+    });
+    if (/sRGB/i.test(stdout)) return path;
+    const out = join(outDir, "design-srgb.png");
+    await execFileAsync(
+      "sips",
+      [
+        "--matchTo",
+        "/System/Library/ColorSync/Profiles/sRGB Profile.icc",
+        path,
+        "--out",
+        out,
+      ],
+      { timeout: 15000 }
+    );
+    tempFiles.push(out);
+    return out;
+  } catch {
+    return path;
+  }
 }
 
 async function cliVersion(
@@ -259,6 +295,8 @@ export async function runComparison(
       progress({ step: "figma", status: "done" });
     }
 
+    designPath = await normalizeToSrgb(designPath, reportDir, tempFiles);
+
     let implPath: string;
     if (params.implImage) {
       const source = resolve(params.implImage);
@@ -336,8 +374,22 @@ export async function runComparison(
     const date = new Date().toISOString().split("T")[0];
 
     progress({ step: "report", status: "start" });
+    const name =
+      params.name ??
+      (await generateComparisonName(
+        params.model,
+        {
+          figmaUrl: params.figmaUrl,
+          designImage: params.designImage,
+          targetUrl: params.targetUrl,
+          selector: params.selector,
+          componentFile: params.resolved?.filePath,
+          discrepancies,
+        },
+        params.aiModel
+      ));
     const html = await generateHtmlReport({
-      name: params.name,
+      name,
       designSource: params.figmaUrl ?? designPath,
       targetUrl: params.targetUrl,
       model: modelLabel,
@@ -398,7 +450,7 @@ export async function runComparison(
       modelLabel,
       date,
       captureWarning,
-      name: params.name,
+      name,
       figmaUrl: params.figmaUrl,
       designImage: params.designImage?.startsWith("data:")
         ? designDest
@@ -412,7 +464,7 @@ export async function runComparison(
       JSON.stringify(
         {
           reportId,
-          name: params.name,
+          name,
           figmaUrl: params.figmaUrl,
           designImage: params.designImage,
           targetUrl: params.targetUrl,
@@ -437,7 +489,7 @@ export async function runComparison(
           ? JSON.stringify(
               {
                 reportId,
-                name: params.name,
+                name,
                 figmaUrl: params.figmaUrl,
                 designImage: params.designImage,
                 targetUrl: params.targetUrl,
@@ -486,6 +538,7 @@ export interface LoadedReport {
   date: string;
   summary: ComparisonSummary;
   discrepancies: Discrepancy[];
+  manifest?: RunManifest;
   reportDir: string;
   reportPath: string;
   jsonPath: string;
@@ -516,6 +569,7 @@ export async function loadReport(
     date: string;
     summary: ComparisonSummary;
     discrepancies: Discrepancy[];
+    manifest?: RunManifest;
   };
 
   return {

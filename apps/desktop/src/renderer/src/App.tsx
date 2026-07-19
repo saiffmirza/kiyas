@@ -4,6 +4,7 @@ import wordmarkDark from "./assets/wordmark-dark.png";
 import { TerminalPanel } from "./TerminalPanel";
 import type {
   CaptureResponse,
+  CompareRequest,
   CompareResponse,
   DesktopProgressEvent,
   DoctorReport,
@@ -205,7 +206,7 @@ export function App() {
         : "";
   const canRun = !busy && !missingStep;
 
-  async function run() {
+  async function startCapture(params: CompareRequest) {
     setPhase("capturing");
     setResult(null);
     setPreview(null);
@@ -214,15 +215,7 @@ export function App() {
     setSteps({});
     setStepMsgs({});
 
-    const response = await window.kiyas.capture({
-      repo,
-      figmaUrl: designTab === "figma" ? figmaUrl.trim() : undefined,
-      designImage: designTab === "image" ? designImage : undefined,
-      targetUrl,
-      component: component.trim() || undefined,
-      viewport: "1440x900",
-      threshold: "all",
-    });
+    const response = await window.kiyas.capture(params);
 
     if (response.ok) {
       setPreview(response);
@@ -231,6 +224,29 @@ export function App() {
       setError(response.error);
       setPhase("error");
     }
+  }
+
+  function run() {
+    return startCapture({
+      repo,
+      figmaUrl: designTab === "figma" ? figmaUrl.trim() : undefined,
+      designImage: designTab === "image" ? designImage : undefined,
+      targetUrl,
+      component: component.trim() || undefined,
+      viewport: "1440x900",
+      threshold: "all",
+    });
+  }
+
+  function rerunReport(item: ReportListItem) {
+    if (!item.rerun) return;
+    // Reflect the rerun's inputs in the form so the progress steps and a
+    // follow-up manual run line up with what's actually executing.
+    setDesignTab(item.rerun.figmaUrl ? "figma" : "image");
+    setFigmaUrl(item.rerun.figmaUrl ?? "");
+    setDesignImage(item.rerun.designImage ?? "");
+    setComponent("");
+    return startCapture({ repo, ...item.rerun });
   }
 
   async function confirmCompare() {
@@ -670,6 +686,18 @@ export function App() {
                         <em className="c-clean">clean</em>
                       )}
                     </span>
+                    {h.rerun && (
+                      <button
+                        className="history-rerun"
+                        title="Run this comparison again"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          rerunReport(h);
+                        }}
+                      >
+                        ↻
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -489,17 +489,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.005em;
   color: var(--navy);
-  margin-bottom: 6px;
-}
-
-.card h2::after {
-  content: "";
-  display: block;
-  width: 30px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--gold);
-  margin: 8px 0 16px;
+  margin-bottom: 16px;
 }
 
 .card-head {
@@ -777,6 +767,29 @@ body {
 .history-counts {
   display: inline-flex;
   gap: 10px;
+}
+
+.history-rerun {
+  font-family: var(--font-ui);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 7px;
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.history-list li:hover .history-rerun {
+  visibility: visible;
+}
+
+.history-rerun:hover {
+  border-color: var(--gold);
+  background: var(--gold-muted);
+  color: var(--gold);
 }
 
 .history-counts em,
@@ -1128,6 +1141,12 @@ body {
 [data-theme="dark"] .error-box {
   background: rgba(240, 123, 123, 0.12);
   border-color: rgba(240, 123, 123, 0.28);
+}
+
+[data-theme="dark"] .progress-card.busy {
+  border-color: rgba(212, 182, 103, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
 
 [data-theme="dark"] .progress li.done .icon {
