@@ -40,6 +40,9 @@ jobs:
             exit 1
           fi
 
+      - name: MCP server smoke
+        run: npm run test:smoke -w kiyas-cli
+
       - name: Verify npm artifact contents
         run: |
           npm pack --dry-run --json -w kiyas-cli > pack.json

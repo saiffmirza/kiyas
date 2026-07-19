@@ -11,6 +11,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "test:smoke": "esbuild smoke/mcp.test.ts --bundle --format=esm --platform=node --packages=external --outfile=smoke/dist/mcp.test.mjs && node --test smoke/dist/mcp.test.mjs",
     "postinstall": "node scripts/postinstall.js",
     "prepublishOnly": "npm run build && cp ../../README.md ./README.md"
   },
