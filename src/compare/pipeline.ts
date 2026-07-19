@@ -140,6 +140,22 @@ export function defaultReportsDir(cwd: string = process.cwd()): string {
   return join(cwd, ".kiyas", "reports");
 }
 
+// AI CLI subprocesses fail transiently (rate limits, API blips); one retry
+// absorbs most of those without redoing the capture work. A missing CLI
+// can't succeed on retry, so fail fast there.
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/not found on PATH/.test(message)) {
+      throw err;
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+    return fn();
+  }
+}
+
 export async function runComparison(
   params: RunComparisonParams
 ): Promise<PersistedReport> {
@@ -208,6 +224,7 @@ export async function runComparison(
     });
     const implPath = await capturePlaywright({
       url: params.targetUrl,
+      outputPath: join(reportDir, "impl.png"),
       viewport: params.viewport,
       selector: params.selector,
       wait: params.wait,
@@ -215,7 +232,6 @@ export async function runComparison(
       fullPage: params.fullPage,
       authState: params.authState,
     });
-    tempFiles.push(implPath);
     progress({ step: "screenshot", status: "done" });
 
     const modelLabel =
@@ -234,10 +250,12 @@ export async function runComparison(
         metadata,
       };
       if (runCount === 1) {
-        discrepancies = await compareImages(compareOptions);
+        discrepancies = await withRetry(() => compareImages(compareOptions));
       } else {
         const results = await Promise.all(
-          Array.from({ length: runCount }, () => compareImages(compareOptions))
+          Array.from({ length: runCount }, () =>
+            withRetry(() => compareImages(compareOptions))
+          )
         );
         discrepancies = voteOnFindings(results);
       }
@@ -252,9 +270,8 @@ export async function runComparison(
     }
 
     const designDest = join(reportDir, "design.png");
-    const implDest = join(reportDir, "impl.png");
+    const implDest = implPath;
     await copyFile(designPath, designDest);
-    await copyFile(implPath, implDest);
 
     const reportPath = join(reportDir, "report.html");
     const jsonPath = join(reportDir, "discrepancies.json");
@@ -378,6 +395,15 @@ export async function runComparison(
     }
 
     return persisted;
+  } catch (err) {
+    const detail =
+      err instanceof Error ? (err.stack ?? err.message) : String(err);
+    try {
+      await writeFile(join(reportDir, "error.log"), `${detail}\n`, "utf-8");
+    } catch {
+      // best-effort diagnostics
+    }
+    throw err;
   } finally {
     for (const f of tempFiles) {
       try {

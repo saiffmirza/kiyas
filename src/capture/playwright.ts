@@ -1,9 +1,10 @@
 import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { tmpdir } from "node:os";
+import { resolve } from "node:path";
 
 export interface PlaywrightCaptureOptions {
   url: string;
+  /** Where to write the screenshot PNG. */
+  outputPath: string;
   viewport?: string;
   selector?: string;
   wait?: number;
@@ -75,7 +76,7 @@ export async function capturePlaywright(
       await page.waitForTimeout(options.wait);
     }
 
-    const imagePath = join(tmpdir(), `kiyas-target-${Date.now()}.png`);
+    const imagePath = options.outputPath;
     const screenshotOptions = {
       path: imagePath,
       animations: "disabled",

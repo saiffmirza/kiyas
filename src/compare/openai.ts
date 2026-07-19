@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseDiscrepancies, type Discrepancy } from "./index.js";
 import { extractJson } from "./extract-json.js";
+import { cliFailure } from "./cli-error.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -45,12 +46,17 @@ export async function compareWithOpenAI(
     }
     args.push(fullPrompt);
 
-    // Empty temp cwd so the host project's AGENTS.md can't leak in.
-    await execFileAsync("codex", args, {
-      cwd: dir,
-      timeout: 120_000,
-      maxBuffer: 10 * 1024 * 1024,
-    });
+    const timeout = 120_000;
+    try {
+      // Empty temp cwd so the host project's AGENTS.md can't leak in.
+      await execFileAsync("codex", args, {
+        cwd: dir,
+        timeout,
+        maxBuffer: 10 * 1024 * 1024,
+      });
+    } catch (err) {
+      throw cliFailure("codex", err, timeout);
+    }
     text = (await readFile(outFile, "utf-8")).trim();
   } finally {
     await rm(dir, { recursive: true, force: true });
