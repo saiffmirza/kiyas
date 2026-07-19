@@ -13,6 +13,7 @@
     "typecheck": "npm run typecheck -w @kiyas/core && npm run typecheck -w kiyas-cli && npm run typecheck -w @kiyas/desktop",
     "eval": "esbuild eval/run.ts --bundle --format=esm --platform=node --packages=external --outfile=eval/dist/run.mjs && node eval/dist/run.mjs",
     "test": "esbuild eval/matcher.test.ts --bundle --format=esm --platform=node --packages=external --outfile=eval/dist/matcher.test.mjs && node --test eval/dist/matcher.test.mjs",
+    "test:smoke": "esbuild eval/smoke.test.ts --bundle --format=esm --platform=node --packages=external --outfile=eval/dist/smoke.test.mjs && node --test eval/dist/smoke.test.mjs",
     "bump": "node packages/cli/scripts/bump.js"
   },
   "devDependencies": {

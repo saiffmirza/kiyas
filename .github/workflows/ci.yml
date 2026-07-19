@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      # Browsers are installed explicitly (chromium only) before the capture smoke
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      - run: npm run build
+
+      - name: Built CLI smoke
+        run: |
+          BIN=$(node packages/cli/dist/index.js --version)
+          PKG=$(node -p "require('./packages/cli/package.json').version")
+          if [ "$BIN" != "$PKG" ]; then
+            echo "Built CLI reports $BIN but packages/cli/package.json says $PKG"
+            exit 1
+          fi
+
+      - name: Verify npm artifact contents
+        run: |
+          npm pack --dry-run --json -w kiyas-cli > pack.json
+          node -e "
+            const files = require('./pack.json')[0].files.map((f) => f.path);
+            const missing = ['dist/index.js', 'scripts/postinstall.js'].filter((p) => !files.includes(p));
+            if (missing.length) {
+              console.error('Missing from the npm artifact:', missing.join(', '));
+              process.exit(1);
+            }
+          "
+
+      - name: Capture smoke (Playwright)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:smoke
+
+      - run: npm run build -w @kiyas/desktop
