@@ -1,9 +1,9 @@
 {
   "name": "@kiyas/desktop",
   "productName": "Kiyas",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
-  "description": "Kiyas desktop app — point-and-click design fidelity checks for non-technical users.",
+  "description": "Kiyas desktop app \u2014 point-and-click design fidelity checks for non-technical users.",
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
