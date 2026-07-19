@@ -31,6 +31,10 @@
     "codex"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/saiffmirza/kiyas.git"
+  },
   "files": [
     "dist",
     "assets",
