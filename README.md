@@ -27,21 +27,21 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
                           │  kiyas               │
                           │  (MCP server / CLI)  │
                           │                      │
-                          │  figma + target      │
-                          │  / component         │
+                          │  figma / design img  │
+                          │  + target/component  │
                           └──────────┬───────────┘
                                      │
                       ┌──────────────┼──────────────┐
                       ▼              ▼               ▼
               ┌──────────────┐ ┌───────────┐ ┌─────────────┐
-              │ 1. Auth      │ │ 2. Figma  │ │ 3. Resolve  │
+              │ 1. Auth      │ │ 2. Design │ │ 3. Resolve  │
               │              │ │  Capture  │ │  Component  │
               │ Verify       │ │           │ │             │
-              │ Claude Code  │ │ Export    │ │ AI agent    │
-              │ or Codex CLI │ │ frame as  │ │ searches    │
-              │ is installed │ │ PNG via   │ │ codebase,   │
-              │ & signed in  │ │ Figma     │ │ finds URL + │
-              │              │ │ REST API  │ │ CSS selector│
+              │ Claude Code  │ │ Figma API │ │ AI agent    │
+              │ or Codex CLI │ │ PNG export│ │ searches    │
+              │ is installed │ │ — or your │ │ codebase,   │
+              │ & signed in  │ │ own image │ │ finds URL + │
+              │              │ │ (--design)│ │ CSS selector│
               └──────┬───────┘ └─────┬─────┘ └──────┬──────┘
                      │               │               │
                      │               ▼               ▼
@@ -81,7 +81,7 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
 **Step-by-step:**
 
 1. **Authenticate** — kiyas delegates AI calls to the Claude Code or Codex CLI. Your existing subscription handles everything — no API keys needed.
-2. **Export Figma design** — Parses the Figma URL, calls the Figma REST API to export the frame as a 2x PNG, and fetches node metadata (colors, fonts, spacing).
+2. **Get the design image** — Parses the Figma URL, calls the Figma REST API to export the frame as a PNG (at the same scale as the screenshot — adaptive, see `--scale`), and fetches node metadata (colors, fonts, spacing). Or skip Figma entirely: pass `--design <path>` with your own design image and no Figma token is needed.
 3. **Resolve component** — An AI agent scans your codebase (file tree, routes, components) and maps your natural-language description to a URL on your dev server + a CSS selector.
 4. **Screenshot implementation** — Playwright launches headless Chromium, navigates to the resolved URL, and captures the component.
 5. **AI comparison** — Both PNGs are passed to the Claude Code CLI with a structured prompt. The AI identifies every discrepancy with specific CSS properties and values.
