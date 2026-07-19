@@ -81,7 +81,7 @@ Just describe the component by name. kiyas finds it in your codebase, screenshot
 **Step-by-step:**
 
 1. **Authenticate** — kiyas delegates AI calls to the Claude Code or Codex CLI. Your existing subscription handles everything — no API keys needed.
-2. **Get the design image** — Parses the Figma URL, calls the Figma REST API to export the frame as a PNG (at the same scale as the screenshot — adaptive, see `--scale`), and fetches node metadata (colors, fonts, spacing). Or skip Figma entirely: pass `--design <path>` with your own design image and no Figma token is needed.
+2. **Get the design image** — Parses the Figma URL, calls the Figma REST API to export the frame as a PNG (at the same scale as the screenshot — adaptive, see `--scale`), and fetches node metadata (colors, fonts, spacing). Or skip Figma entirely: pass `--design <path-or-url>` with your own design image and no Figma token is needed.
 3. **Resolve component** — An AI agent scans your codebase (file tree, routes, components) and maps your natural-language description to a URL on your dev server + a CSS selector.
 4. **Screenshot implementation** — Playwright launches headless Chromium, navigates to the resolved URL, and captures the component.
 5. **AI comparison** — Both PNGs are passed to the Claude Code CLI with a structured prompt. The AI identifies every discrepancy with specific CSS properties and values.
@@ -168,7 +168,7 @@ or in `.mcp.json` / `mcp.json` / `config.toml`, add an `env` block:
 
 **2. A `.kiyasrc` file** in the project root or home directory: `{ "figmaAccessToken": "..." }`
 
-**3. No token at all — pair with the Figma MCP server.** If the agent already has Figma's own MCP server connected, it can export the frame as an image itself and pass the file path as `designImage` instead of a `figma` URL. kiyas never touches the Figma API in this mode:
+**3. No token at all — pair with the Figma MCP server.** If the agent already has Figma's own MCP server connected, it can export the frame as an image itself and pass the file path (or image URL) as `designImage` instead of a `figma` URL. kiyas never touches the Figma API in this mode:
 
 > Export node 1:234 from the Figma file as a PNG, then use kiyas to compare it against the primary button on the login page.
 
@@ -247,10 +247,10 @@ kiyas --figma "https://www.figma.com/design/abc123/Design?node-id=1:234" \
 | Flag                        | Description                                                   | Required |
 | --------------------------- | ------------------------------------------------------------- | -------- |
 | `--figma <url>`             | Figma frame/component URL                                     | Yes\*\*  |
-| `--design <path>`           | Local design image (e.g. a screenshot) instead of Figma       | Yes\*\*  |
+| `--design <path>`           | Design image (local path or URL) instead of Figma             | Yes\*\*  |
 | `--component <description>` | Natural-language description of the component to find         | Yes\*    |
 | `--target <url>`            | Direct URL of the rendered component (skips AI lookup)        | Yes\*    |
-| `--dev-server <url>`        | Dev server base URL (default: `http://localhost:3000`)        | No       |
+| `--dev-server <url>`        | Dev server base URL (default: auto-detect 3000/5173/8080/4200) | No       |
 | `--model <provider>`        | AI provider: `claude` (default) or `openai`                   | No       |
 | `--output <path>`           | Path to save the report (default: `kiyas-report-<timestamp>.html`) | No  |
 | `--format <type>`           | Output format: `html` (default) or `json`                     | No       |

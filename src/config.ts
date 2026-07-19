@@ -109,7 +109,7 @@ export function requireFigmaToken(): string {
       "1. Set FIGMA_ACCESS_TOKEN in the MCP server config, e.g.:\n" +
       '   claude mcp add kiyas -e FIGMA_ACCESS_TOKEN=<token> -- npx kiyas-cli mcp\n' +
       "2. Add { \"figmaAccessToken\": \"<token>\" } to .kiyasrc in the project root or home directory\n" +
-      "3. Skip Figma entirely: export the frame as an image (e.g. via the Figma MCP server's screenshot tool) and pass its path as `designImage` instead of `figma`."
+      "3. Skip Figma entirely: export the frame as an image (e.g. via a connected Figma MCP server's screenshot tool) and pass its path or URL as `designImage` instead of `figma`."
   );
 }
 

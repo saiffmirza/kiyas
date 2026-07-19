@@ -9,6 +9,7 @@ import {
   runComparison,
 } from "../compare/pipeline.js";
 import { loadSettings } from "../settings.js";
+import { detectDevServer } from "../utils/dev-server.js";
 
 export const compareInputSchema = z.object({
   figma: z
@@ -22,8 +23,8 @@ export const compareInputSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Path to a local design image (e.g. a screenshot) to compare against, instead of a Figma URL. " +
-        "Useful when no Figma token is configured — e.g. export the frame with the Figma MCP server's screenshot tool and pass the file path here."
+      "Local path, http(s) URL, or base64 data: URI of a design image (e.g. a screenshot) to compare against, instead of a Figma URL. " +
+        "Useful when no Figma token is configured — e.g. export the frame with a connected Figma MCP server's screenshot tool and pass the resulting file path or image URL here."
     ),
   target: z
     .string()
@@ -42,7 +43,9 @@ export const compareInputSchema = z.object({
     .string()
     .url()
     .optional()
-    .describe("Dev server base URL (default: http://localhost:3000)"),
+    .describe(
+      "Dev server base URL (default: auto-detect a listening server on ports 3000/5173/8080/4200, else http://localhost:3000)"
+    ),
   model: z
     .enum(["claude", "openai"])
     .optional()
@@ -148,7 +151,7 @@ export async function handleCompare(input: CompareInput) {
     input.devServer ??
     settings.devServer ??
     process.env.DEV_SERVER_URL ??
-    "http://localhost:3000";
+    (await detectDevServer());
   const viewport = input.viewport ?? settings.viewport ?? "1280x720";
   const threshold = input.threshold ?? settings.threshold ?? "all";
 

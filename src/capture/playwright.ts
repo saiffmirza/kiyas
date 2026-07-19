@@ -50,7 +50,21 @@ export async function capturePlaywright(
     });
     const page = await context.newPage();
 
-    await page.goto(options.url, { waitUntil: "load" });
+    try {
+      await page.goto(options.url, { waitUntil: "load" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (
+        message.includes("ERR_CONNECTION_REFUSED") ||
+        message.includes("ECONNREFUSED")
+      ) {
+        throw new Error(
+          `Could not reach ${options.url} — is the dev server running? ` +
+            `If it's on a different port, pass \`devServer\` (MCP) / \`--dev-server\` (CLI), or a full \`target\` URL.`
+        );
+      }
+      throw err;
+    }
     await page.evaluate(() => document.fonts.ready);
     await page.addStyleTag({
       content:

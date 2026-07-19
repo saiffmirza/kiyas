@@ -22,7 +22,7 @@ export interface ProgressEvent {
 export interface RunComparisonParams {
   /** Figma frame URL. Provide either this or `designImage`. */
   figmaUrl?: string;
-  /** Path to a local design image (e.g. a screenshot). Skips the Figma export. */
+  /** Local path, http(s) URL, or base64 data: URI of a design image. Skips the Figma export. */
   designImage?: string;
   targetUrl: string;
   model: "claude" | "openai";
@@ -157,9 +157,33 @@ export async function runComparison(
     let metadata: FigmaNodeMetadata | undefined;
 
     if (params.designImage) {
-      designPath = resolve(params.designImage);
-      if (!existsSync(designPath)) {
-        throw new Error(`Design image not found: ${designPath}`);
+      if (params.designImage.startsWith("data:")) {
+        const match = params.designImage.match(
+          /^data:image\/[\w.+-]+;base64,(.+)$/s
+        );
+        if (!match) {
+          throw new Error(
+            "Unsupported data: URI for design image — expected base64-encoded image data (data:image/...;base64,...)."
+          );
+        }
+        designPath = join(reportDir, "design-source.png");
+        await writeFile(designPath, Buffer.from(match[1], "base64"));
+        tempFiles.push(designPath);
+      } else if (/^https?:\/\//i.test(params.designImage)) {
+        const res = await fetch(params.designImage);
+        if (!res.ok) {
+          throw new Error(
+            `Failed to download design image (HTTP ${res.status}): ${params.designImage}`
+          );
+        }
+        designPath = join(reportDir, "design-source.png");
+        await writeFile(designPath, Buffer.from(await res.arrayBuffer()));
+        tempFiles.push(designPath);
+      } else {
+        designPath = resolve(params.designImage);
+        if (!existsSync(designPath)) {
+          throw new Error(`Design image not found: ${designPath}`);
+        }
       }
     } else {
       if (!params.figmaUrl || !params.figmaToken) {
@@ -298,7 +322,9 @@ export async function runComparison(
       date,
       name: params.name,
       figmaUrl: params.figmaUrl,
-      designImage: params.designImage,
+      designImage: params.designImage?.startsWith("data:")
+        ? designDest
+        : params.designImage,
       targetUrl: params.targetUrl,
       manifest,
     };
