@@ -17,5 +17,6 @@ mac:
     - target: zip
       arch: arm64
   artifactName: Kiyas-${version}-${arch}.${ext}
+afterPack: scripts/adhoc-sign.cjs
 npmRebuild: false
 electronVersion: 33.4.11
