@@ -25,7 +25,10 @@ jobs:
       # Trusted publishing requires npm >= 11.5.1
       - run: npm install -g npm@latest
 
-      - run: npm ci
+      # Scoped install: the npm release only needs cli + core. The desktop
+      # workspace pulls a git-sourced dep (@electron/node-gyp) that current
+      # npm refuses to fetch in CI (EALLOWGIT).
+      - run: npm ci -w kiyas-cli -w @kiyas/core
 
       - name: Verify versions match the tag
         run: |
