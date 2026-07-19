@@ -10,6 +10,7 @@ import { generateHtmlReport } from "../report/html.js";
 import { compareImages, parseDiscrepancies, type Discrepancy } from "./index.js";
 import { voteOnFindings } from "./ensemble.js";
 import { buildComparisonPrompt } from "./prompt.js";
+import { VERSION } from "../version.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -75,6 +76,7 @@ export interface RunManifest {
   provider: "claude" | "openai";
   aiModel?: string;
   runs: number;
+  kiyasVersion: string;
   cliVersion?: string;
   promptVersion: string;
   metadataIncluded: boolean;
@@ -316,6 +318,7 @@ export async function runComparison(
       provider: params.model,
       aiModel: params.aiModel,
       runs: runCount,
+      kiyasVersion: VERSION,
       cliVersion: await cliVersion(params.model),
       promptVersion: createHash("sha256")
         .update(buildComparisonPrompt())

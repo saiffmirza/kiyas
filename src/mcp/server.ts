@@ -6,6 +6,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { VERSION } from "../version.js";
+import { checkForUpdate } from "../utils/update-check.js";
 import {
   compareInputSchema,
   getDiffReportInputSchema,
@@ -85,6 +86,7 @@ export async function startMcpServer(): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+  checkForUpdate();
 }
 
 async function dispatch(name: string, args: Record<string, unknown>) {

@@ -142,6 +142,10 @@ command = "npx"
 args    = ["kiyas-cli@latest", "mcp"]
 ```
 
+### Staying up to date
+
+The configs above use `kiyas-cli@latest` so npx picks up new releases on every launch — the tradeoff is a registry check per start, and launches can fail offline. If you'd rather pin a version (`kiyas-cli@1.3.1`) or use a global install, that's safe too: kiyas checks npm once at startup (non-blocking) and logs a notice to stderr when a newer version is available.
+
 ### Figma access for MCP users
 
 The `compare` tool needs Figma access only when you pass a `figma` URL. Three ways to provide it:

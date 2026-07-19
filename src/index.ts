@@ -12,6 +12,7 @@ import { log } from "./utils/logger.js";
 import { detectDevServer } from "./utils/dev-server.js";
 import { runSetup } from "./setup.js";
 import { VERSION } from "./version.js";
+import { checkForUpdate } from "./utils/update-check.js";
 
 const settings = loadSettings();
 const program = new Command();
@@ -145,6 +146,7 @@ program
   .option("--threshold <level>", "Severity threshold: all, medium, high", settings.threshold ?? "all")
   .option("--format <type>", "Output format: html (default) or json", settings.format ?? "html")
   .action(async (opts) => {
+    checkForUpdate();
     try {
       await run(opts);
     } catch (err: unknown) {
