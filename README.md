@@ -113,8 +113,13 @@ npx playwright install chromium
 **Claude Code**
 
 ```bash
-claude mcp add kiyas -- npx kiyas-cli mcp
+claude mcp add kiyas -- npx -y kiyas-cli mcp
+
+# with a Figma token (only needed for Figma-URL comparisons):
+claude mcp add kiyas -e FIGMA_ACCESS_TOKEN=figd_xxx -- npx -y kiyas-cli mcp
 ```
+
+kiyas is also listed in the official [MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.saiffmirza/kiyas) as `io.github.saiffmirza/kiyas`, so registry-aware clients can install it directly from their MCP catalog.
 
 **Cursor** — edit `~/.cursor/mcp.json`:
 
