@@ -18,3 +18,5 @@ kiyas-impl-*
 .kiyas/
 out/
 
+apps/desktop/build/icon-layers/
+apps/desktop/build/icon.icns
