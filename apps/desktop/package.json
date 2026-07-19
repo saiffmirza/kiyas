@@ -11,6 +11,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
+    "test:smoke": "esbuild smoke/launch.test.ts --bundle --format=esm --platform=node --packages=external --outfile=smoke/dist/launch.test.mjs && node --test smoke/dist/launch.test.mjs",
     "postinstall": "electron-rebuild -f -w node-pty"
   },
   "dependencies": {

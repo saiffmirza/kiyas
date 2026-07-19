@@ -58,3 +58,32 @@ jobs:
           npm run test:smoke
 
       - run: npm run build -w @kiyas/desktop
+
+  # Packaged-app smoke: launches the electron-builder output with a
+  # Finder-like environment (launchd PATH, fresh HOME). Deliberately not a
+  # required check yet — promote it once its flake rate is proven.
+  desktop-smoke:
+    # macOS 26 image ships the actool that compiles build/kiyas.icon
+    runs-on: macos-26
+    env:
+      # _electron drives the packaged app; no browsers needed
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build -w @kiyas/desktop
+
+      - name: Package unsigned .app
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npx electron-builder --mac dir
+
+      - run: npm run test:smoke -w @kiyas/desktop
