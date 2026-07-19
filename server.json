@@ -1,0 +1,38 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.saiffmirza/kiyas",
+  "description": "AI-powered design fidelity — compare Figma designs (or screenshots) against rendered UI. Measured on a golden eval set: 90% mutation recall, zero false positives on clean pairs. Uses your Claude Code or Codex subscription — no API keys.",
+  "repository": {
+    "url": "https://github.com/saiffmirza/kiyas",
+    "source": "github"
+  },
+  "version": "1.2.2",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "kiyas-cli",
+      "version": "1.2.2",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp",
+          "description": "Start the kiyas MCP server on stdio"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "FIGMA_ACCESS_TOKEN",
+          "description": "Figma personal access token (File content → Read only). Only needed when comparing against Figma URLs — screenshot comparisons via designImage need no token.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}
