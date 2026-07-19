@@ -7,7 +7,21 @@
       "layers" : [
         {
           "image-name" : "kaf.png",
-          "name" : "kaf"
+          "name" : "kaf",
+          "fill-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "extended-srgb:0.41961,0.49804,0.84314,1.00000"
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "extended-srgb:0.65882,0.65882,0.69020,1.00000"
+              }
+            }
+          ]
         }
       ],
       "shadow" : {
