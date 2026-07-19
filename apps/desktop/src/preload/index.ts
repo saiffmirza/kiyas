@@ -43,6 +43,8 @@ const api: KiyasApi = {
   compareConfirmed: () => ipcRenderer.invoke("compare-confirmed"),
   openReport: (reportPath: string) =>
     ipcRenderer.invoke("open-report", reportPath),
+  updateCheck: () => ipcRenderer.invoke("update-check"),
+  openUpdate: () => ipcRenderer.invoke("update-open"),
   onProgress: (cb: (event: DesktopProgressEvent) => void) => {
     const listener = (_event: IpcRendererEvent, ev: DesktopProgressEvent) =>
       cb(ev);

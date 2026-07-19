@@ -7,6 +7,7 @@ import type {
   CompareRequest,
   CompareResponse,
   DesktopProgressEvent,
+  DesktopUpdateInfo,
   DoctorReport,
   OpenPort,
   ReportListItem,
@@ -34,6 +35,8 @@ export function App() {
   const [ports, setPorts] = useState<OpenPort[]>([]);
   const [selectedPort, setSelectedPort] = useState<number | null>(null);
   const [doctor, setDoctor] = useState<DoctorReport | null>(null);
+  const [update, setUpdate] = useState<DesktopUpdateInfo | null>(null);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
   const [setupHint, setSetupHint] = useState("");
   const [tokenPanelOpen, setTokenPanelOpen] = useState(false);
   const [tokenValue, setTokenValue] = useState("");
@@ -108,6 +111,10 @@ export function App() {
   const refreshHistory = useCallback((repoPath: string) => {
     if (repoPath) window.kiyas.reportsList(repoPath).then(setHistory);
     else setHistory([]);
+  }, []);
+
+  useEffect(() => {
+    window.kiyas.updateCheck().then(setUpdate);
   }, []);
 
   useEffect(() => {
@@ -474,6 +481,27 @@ export function App() {
             </button>
           </div>
         </div>
+        {update && !updateDismissed && (
+          <div className="update-banner">
+            <span>
+              Kiyas {update.version} is available — you&apos;re on{" "}
+              {update.current}.
+            </span>
+            <button
+              className="btn primary"
+              onClick={() => window.kiyas.openUpdate()}
+            >
+              Download
+            </button>
+            <button
+              className="update-dismiss"
+              title="Dismiss until next launch"
+              onClick={() => setUpdateDismissed(true)}
+            >
+              ✕
+            </button>
+          </div>
+        )}
         {phase === "done" && result ? (
           <div className="main-inner focus">
             <section className="result-focus">

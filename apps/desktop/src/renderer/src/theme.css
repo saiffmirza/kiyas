@@ -1156,3 +1156,43 @@ body {
 [data-theme="dark"] .progress li.fail .icon {
   background: rgba(240, 123, 123, 0.16);
 }
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 28px 4px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(212, 182, 103, 0.45);
+  background: rgba(212, 182, 103, 0.12);
+  font-size: 13px;
+}
+
+.update-banner span {
+  flex: 1;
+}
+
+.update-banner .btn {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.update-dismiss {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.55;
+  font-size: 13px;
+  padding: 4px 6px;
+}
+
+.update-dismiss:hover {
+  opacity: 1;
+}
+
+[data-theme="dark"] .update-banner {
+  border-color: rgba(212, 182, 103, 0.35);
+  background: rgba(212, 182, 103, 0.1);
+}
