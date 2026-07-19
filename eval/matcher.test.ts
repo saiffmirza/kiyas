@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert";
-import { sameFinding, propertyFamilies } from "../src/compare/finding-key.js";
+import { sameFinding, propertyFamilies } from "../packages/core/src/compare/finding-key.js";
 
 // Regression fixtures: real model outputs from the 2026-07-18 eval run that
 // the matcher originally failed to match against their goldens.

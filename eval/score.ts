@@ -1,9 +1,9 @@
-import type { Discrepancy } from "../src/compare/index.js";
+import type { Discrepancy } from "../packages/core/src/compare/index.js";
 import {
   sameFinding,
   normalizeProperty,
   elementTokens,
-} from "../src/compare/finding-key.js";
+} from "../packages/core/src/compare/finding-key.js";
 
 export interface Golden {
   element: string;

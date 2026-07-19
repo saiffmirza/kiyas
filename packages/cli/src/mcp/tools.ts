@@ -1,0 +1,273 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { z } from "zod";
+import {
+  resolveAuth,
+  requireFigmaToken,
+  resolveComponent,
+  defaultReportsDir,
+  loadReport,
+  runComparison,
+  loadSettings,
+  detectDevServer,
+} from "@kiyas/core";
+
+export const compareInputSchema = z.object({
+  figma: z
+    .string()
+    .url()
+    .optional()
+    .describe(
+      "Figma frame/component URL. Provide either `figma` OR `designImage`."
+    ),
+  designImage: z
+    .string()
+    .optional()
+    .describe(
+      "Local path, http(s) URL, or base64 data: URI of a design image (e.g. a screenshot) to compare against, instead of a Figma URL. " +
+        "Useful when no Figma token is configured — e.g. export the frame with a connected Figma MCP server's screenshot tool and pass the resulting file path or image URL here."
+    ),
+  target: z
+    .string()
+    .url()
+    .optional()
+    .describe(
+      "Direct URL of the rendered component. Provide either `target` OR `component`."
+    ),
+  component: z
+    .string()
+    .optional()
+    .describe(
+      'Natural-language description of the component to find in the codebase, e.g. "primary button on the login page".'
+    ),
+  devServer: z
+    .string()
+    .url()
+    .optional()
+    .describe(
+      "Dev server base URL (default: auto-detect a listening server on ports 3000/5173/8080/4200, else http://localhost:3000)"
+    ),
+  model: z
+    .enum(["claude", "openai"])
+    .optional()
+    .describe("AI provider (default: claude)"),
+  viewport: z
+    .string()
+    .regex(/^\d+x\d+$/)
+    .optional()
+    .describe("Viewport for the screenshot, format WIDTHxHEIGHT (default: 1280x720)"),
+  scale: z
+    .number()
+    .positive()
+    .optional()
+    .describe(
+      "Render scale applied to both the Figma export and the screenshot (default: adaptive — 2 for component-sized captures, 1 for large ones)"
+    ),
+  fullPage: z
+    .boolean()
+    .optional()
+    .describe(
+      "Capture the full scrollable page when no selector is given (default: true)"
+    ),
+  runs: z
+    .number()
+    .int()
+    .min(1)
+    .max(5)
+    .optional()
+    .describe(
+      "Run the comparison N times and keep majority-vote findings — higher consistency at N× cost (default: 1)"
+    ),
+  selector: z
+    .string()
+    .optional()
+    .describe("CSS selector to screenshot a specific element"),
+  colorScheme: z
+    .enum(["light", "dark"])
+    .optional()
+    .describe(
+      "Force prefers-color-scheme for the capture. Default: auto — kiyas detects the design's brightness and retries in the matching scheme."
+    ),
+  wait: z
+    .number()
+    .int()
+    .nonnegative()
+    .optional()
+    .describe("Time in ms to wait after page load before screenshotting"),
+  authState: z
+    .string()
+    .optional()
+    .describe(
+      "Path to a Playwright storageState JSON file (cookies + localStorage). " +
+        "Lets kiyas screenshot authenticated views the same way your tests do. " +
+        "Generate with `npx playwright codegen --save-storage=auth.json`."
+    ),
+  threshold: z
+    .enum(["all", "medium", "high"])
+    .optional()
+    .describe("Severity threshold for the rendered HTML report (default: all)"),
+  name: z
+    .string()
+    .optional()
+    .describe("Friendly name for the comparison, used in the report header"),
+});
+
+export type CompareInput = z.infer<typeof compareInputSchema>;
+
+export const getDiffReportInputSchema = z.object({
+  reportId: z.string().describe("Report ID returned from a prior compare call"),
+  format: z
+    .enum(["html", "json"])
+    .optional()
+    .describe("Which artifact to return (default: json)"),
+  includeContent: z
+    .boolean()
+    .optional()
+    .describe(
+      "When true, return the raw file content inline. When false, return only the path. Default: true for json, false for html (HTML is large)."
+    ),
+});
+
+export type GetDiffReportInput = z.infer<typeof getDiffReportInputSchema>;
+
+export const listIssuesInputSchema = z.object({
+  reportId: z.string().describe("Report ID returned from a prior compare call"),
+  severity: z
+    .enum(["all", "high", "medium", "low"])
+    .optional()
+    .describe("Filter to a single severity level (default: all)"),
+});
+
+export type ListIssuesInput = z.infer<typeof listIssuesInputSchema>;
+
+export async function handleCompare(input: CompareInput) {
+  if (!input.figma && !input.designImage) {
+    throw new Error(
+      "Provide either `figma` (a Figma URL) or `designImage` (a local image path)."
+    );
+  }
+  if (!input.target && !input.component) {
+    throw new Error(
+      "Provide either `target` (a URL) or `component` (a natural-language description)."
+    );
+  }
+
+  const settings = loadSettings();
+  const model = input.model ?? settings.model ?? "claude";
+  const devServer =
+    input.devServer ??
+    settings.devServer ??
+    process.env.DEV_SERVER_URL ??
+    (await detectDevServer());
+  const viewport = input.viewport ?? settings.viewport ?? "1280x720";
+  const threshold = input.threshold ?? settings.threshold ?? "all";
+
+  const figmaToken = input.figma ? requireFigmaToken() : undefined;
+  const auth = await resolveAuth(model);
+  const aiModel =
+    auth.provider === "claude"
+      ? settings.claudeModel ?? "sonnet"
+      : settings.codexModel;
+
+  let targetUrl = input.target;
+  let selector = input.selector;
+  let componentName = input.component;
+  let resolvedInfo:
+    | { filePath: string; url: string; selector?: string }
+    | undefined;
+
+  if (input.component && !input.target) {
+    const resolved = await resolveComponent(
+      input.component,
+      devServer,
+      auth.provider,
+      process.cwd(),
+      aiModel,
+      input.designImage ? resolve(input.designImage) : undefined
+    );
+    targetUrl = resolved.url;
+    selector = resolved.selector ?? selector;
+    componentName = resolved.componentName;
+    resolvedInfo = {
+      filePath: resolved.filePath,
+      url: resolved.url,
+      selector: resolved.selector,
+    };
+  }
+
+  const result = await runComparison({
+    figmaUrl: input.figma,
+    designImage: input.designImage,
+    targetUrl: targetUrl!,
+    model: auth.provider,
+    aiModel,
+    runs: input.runs,
+    resolved: resolvedInfo,
+    figmaToken,
+    viewport,
+    scale: input.scale,
+    fullPage: input.fullPage,
+    selector,
+    colorScheme: input.colorScheme,
+    focused: Boolean(selector || (input.component && !input.target)),
+    wait: input.wait,
+    authState: input.authState,
+    threshold,
+    format: "html",
+    name: componentName ?? input.name,
+  });
+
+  return {
+    reportId: result.reportId,
+    summary: result.summary,
+    reportPath: result.reportPath,
+    jsonPath: result.jsonPath,
+    designImagePath: result.designImagePath,
+    implImagePath: result.implImagePath,
+    discrepancies: result.discrepancies,
+    model: result.modelLabel,
+    figmaUrl: result.figmaUrl,
+    targetUrl: result.targetUrl,
+    name: result.name,
+  };
+}
+
+export async function handleGetDiffReport(input: GetDiffReportInput) {
+  const report = await loadReport(input.reportId, defaultReportsDir());
+  const format = input.format ?? "json";
+  const includeContent =
+    input.includeContent ?? (format === "json" ? true : false);
+
+  const path = format === "json" ? report.jsonPath : report.reportPath;
+  const base = {
+    reportId: report.reportId,
+    format,
+    path,
+    summary: report.summary,
+  };
+
+  if (!includeContent) {
+    return base;
+  }
+
+  const content = await readFile(path, "utf-8");
+  return { ...base, content };
+}
+
+export async function handleListIssues(input: ListIssuesInput) {
+  const report = await loadReport(input.reportId, defaultReportsDir());
+  const severity = input.severity ?? "all";
+
+  let issues = report.discrepancies;
+  if (severity !== "all") {
+    const wanted = severity.toUpperCase();
+    issues = issues.filter((d) => d.severity === wanted);
+  }
+
+  return {
+    reportId: report.reportId,
+    severity,
+    count: issues.length,
+    issues,
+  };
+}

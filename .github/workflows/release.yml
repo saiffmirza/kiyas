@@ -13,11 +13,11 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # full history for commit-based release notes
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
@@ -33,10 +33,10 @@ jobs:
           node -e "
             const { readFileSync } = require('node:fs');
             const tag = process.argv[1];
-            const pkg = JSON.parse(readFileSync('package.json', 'utf-8')).version;
+            const pkg = JSON.parse(readFileSync('packages/cli/package.json', 'utf-8')).version;
             const server = JSON.parse(readFileSync('server.json', 'utf-8'));
-            const versionTs = readFileSync('src/version.ts', 'utf-8').match(/\"([^\"]+)\"/)[1];
-            const all = { 'package.json': pkg, 'server.json': server.version, 'server.json packages[0]': server.packages[0].version, 'src/version.ts': versionTs };
+            const versionTs = readFileSync('packages/core/src/version.ts', 'utf-8').match(/\"([^\"]+)\"/)[1];
+            const all = { 'packages/cli/package.json': pkg, 'server.json': server.version, 'server.json packages[0]': server.packages[0].version, 'packages/core/src/version.ts': versionTs };
             const bad = Object.entries(all).filter(([, v]) => v !== tag);
             if (bad.length) {
               console.error('Version mismatch with tag v' + tag + ':', Object.fromEntries(bad));
@@ -50,7 +50,7 @@ jobs:
       - run: npm test
 
       - name: Publish to npm
-        run: npm publish
+        run: npm publish -w kiyas-cli
 
       - name: Publish to MCP Registry
         run: |
@@ -64,7 +64,7 @@ jobs:
         # --generate-notes only surfaces merged PRs; commits land on main
         # directly, so build the notes from commit subjects instead.
         run: |
-          PREV=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          PREV=$(git describe --tags --abbrev=0 --match 'v[0-9]*' "$GITHUB_REF_NAME^" 2>/dev/null || true)
           {
             git log --no-merges --pretty='- %s' ${PREV:+$PREV..}$GITHUB_REF_NAME
             echo ""

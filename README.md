@@ -18,6 +18,32 @@ Unlike pixel-diff tools, kiyas uses vision AI to understand _what_ is different 
 
 Just describe the component by name. kiyas finds it in your codebase, screenshots it, and compares it against the Figma design.
 
+Prefer an app over a terminal? There's also a [desktop app](#desktop-app).
+
+---
+
+## Desktop App
+
+A native macOS app for running the same comparisons point-and-click — built for designers and anyone who'd rather not touch a terminal. Pick a project, paste a Figma link (or drop in a screenshot), describe the component, and get the full report in-app. It uses the same engine and the same subscription-based auth: AI calls go through the Claude Code or Codex CLI on your machine, never an API key.
+
+**[⬇ Download the latest release](https://github.com/saiffmirza/kiyas/releases/latest)** (Apple Silicon)
+
+1. Download the `.dmg`, drag **Kiyas** to Applications.
+2. Preview builds aren't notarized yet — on first launch, right-click → Open (or run `xattr -dr com.apple.quarantine /Applications/Kiyas.app`).
+3. Sign in to [Claude Code](https://claude.ai/code) or Codex in any terminal once; the app picks it up from there.
+
+Highlights: project sidebar with dev-server detection, capture preview + crop before comparing, built-in terminal, full dark mode, and a Liquid Glass icon on macOS 26.
+
+To build from source instead:
+
+```bash
+git clone https://github.com/saiffmirza/kiyas && cd kiyas
+npm install
+npm run desktop        # dev mode
+# or package a .app/.dmg:
+cd apps/desktop && npx electron-builder --mac
+```
+
 ---
 
 ## How It Works
@@ -384,38 +410,56 @@ kiyas --config ./kiyas.config.json
 ## Project Structure
 
 ```
-kiyas/
-├── src/
-│   ├── index.ts                # CLI entry point (argument parsing, orchestration)
-│   ├── config.ts               # Config file loading + Figma token resolution
-│   ├── auth/
-│   │   ├── index.ts            # Auth resolver (picks best available auth)
-│   │   ├── claude-oauth.ts     # Verify Claude Code CLI is available
-│   │   └── openai-auth.ts      # Verify Codex CLI is available
-│   ├── resolve/
-│   │   └── component.ts        # AI agent: finds component in codebase → URL + selector
-│   ├── capture/
-│   │   ├── figma.ts            # Figma REST API: export frame as PNG + metadata
-│   │   └── playwright.ts       # Playwright: headless screenshot of rendered component
-│   ├── compare/
-│   │   ├── index.ts            # Orchestrator: sends images to vision AI
-│   │   ├── pipeline.ts         # Pure runComparison() + report persistence (shared by CLI + MCP)
-│   │   ├── claude.ts           # Claude comparison via Claude Code CLI
-│   │   ├── openai.ts           # OpenAI comparison via Codex CLI
-│   │   └── prompt.ts           # The comparison prompt (shared across providers)
-│   ├── mcp/
-│   │   ├── server.ts           # MCP server bootstrap (stdio transport)
-│   │   └── tools.ts            # Zod schemas + handlers (compare, get_diff_report, list_issues)
-│   ├── report/
-│   │   └── html.ts             # Generate self-contained HTML report with embedded images
-│   └── utils/
-│       ├── parse-figma-url.ts  # Extract file key + node ID from Figma URL
-│       └── logger.ts           # Minimal logging utility
+kiyas/  (npm workspaces monorepo)
+├── packages/
+│   ├── core/                       # @kiyas/core — the engine (private, bundled into the CLI)
+│   │   └── src/
+│   │       ├── index.ts            # Public API barrel (runComparison, resolveComponent, …)
+│   │       ├── config.ts           # Config file loading + Figma token resolution
+│   │       ├── settings.ts         # Persisted user settings
+│   │       ├── auth/
+│   │       │   ├── index.ts        # Auth resolver (picks best available auth)
+│   │       │   ├── claude-oauth.ts # Verify Claude Code CLI is available
+│   │       │   └── openai-auth.ts  # Verify Codex CLI is available
+│   │       ├── resolve/
+│   │       │   └── component.ts    # AI agent: finds component in codebase → URL + selector
+│   │       ├── capture/
+│   │       │   ├── figma.ts        # Figma REST API: export frame as PNG + metadata
+│   │       │   └── playwright.ts   # Playwright: headless screenshot of rendered component
+│   │       ├── compare/
+│   │       │   ├── index.ts        # Orchestrator: sends images to vision AI
+│   │       │   ├── pipeline.ts     # Pure runComparison() + report persistence (shared by CLI + MCP)
+│   │       │   ├── claude.ts       # Claude comparison via Claude Code CLI
+│   │       │   ├── openai.ts       # OpenAI comparison via Codex CLI
+│   │       │   └── prompt.ts       # The comparison prompt (shared across providers)
+│   │       ├── report/
+│   │       │   └── html.ts         # Generate self-contained HTML report with embedded images
+│   │       └── utils/
+│   │           ├── parse-figma-url.ts  # Extract file key + node ID from Figma URL
+│   │           └── logger.ts       # Minimal logging utility
+│   └── cli/                        # kiyas-cli — the published npm package
+│       ├── src/
+│       │   ├── index.ts            # CLI entry point (argument parsing, orchestration)
+│       │   ├── setup.ts            # Interactive first-time setup
+│       │   └── mcp/
+│       │       ├── server.ts       # MCP server bootstrap (stdio transport)
+│       │       └── tools.ts        # Zod schemas + handlers (compare, get_diff_report, list_issues)
+│       ├── package.json
+│       └── tsup.config.ts
+├── apps/
+│   └── desktop/                    # @kiyas/desktop — Electron app (macOS)
+│       ├── src/
+│       │   ├── main/               # Main process: IPC, capture flow, pty terminal
+│       │   ├── preload/            # Typed context bridge (window.kiyas)
+│       │   └── renderer/           # React UI (cream/navy/gold theme, dark mode)
+│       ├── build/kiyas.icon        # Icon Composer bundle (Liquid Glass icon source)
+│       ├── scripts/gen-icon.mjs    # Renders all icon variants from the Farisi kāf
+│       └── electron-builder.yml
+├── eval/                           # Golden eval set + scoring harness
 ├── .env.example
 ├── .kiyasrc.example
-├── package.json
-├── tsconfig.json
-└── tsup.config.ts
+├── package.json                    # Workspace root
+└── tsconfig.json
 ```
 
 ---
@@ -431,7 +475,8 @@ kiyas/
 | AI comparison        | Claude Code CLI or Codex CLI (vision)             |
 | Component resolution | Claude Code CLI / Codex CLI (agent)               |
 | Output               | HTML (default), JSON                              |
-| Build                | tsup                                              |
+| Desktop app          | Electron, electron-vite, React, node-pty + xterm  |
+| Build                | tsup, electron-builder                            |
 | Package manager      | npm                                               |
 
 ---

@@ -1,0 +1,21 @@
+appId: com.saifmirza.kiyas
+productName: Kiyas
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**
+  - resources/**
+asarUnpack:
+  - "**/node_modules/node-pty/**"
+mac:
+  icon: build/kiyas.icon
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch: arm64
+    - target: zip
+      arch: arm64
+  artifactName: Kiyas-${version}-${arch}.${ext}
+npmRebuild: false
+electronVersion: 33.4.11
