@@ -113,10 +113,10 @@ npx playwright install chromium
 **Claude Code**
 
 ```bash
-claude mcp add kiyas -- npx -y kiyas-cli mcp
+claude mcp add kiyas -- npx -y kiyas-cli@latest mcp
 
 # with a Figma token (only needed for Figma-URL comparisons):
-claude mcp add kiyas -e FIGMA_ACCESS_TOKEN=figd_xxx -- npx -y kiyas-cli mcp
+claude mcp add kiyas -e FIGMA_ACCESS_TOKEN=figd_xxx -- npx -y kiyas-cli@latest mcp
 ```
 
 kiyas is also listed in the official [MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.saiffmirza/kiyas) as `io.github.saiffmirza/kiyas`, so registry-aware clients can install it directly from their MCP catalog.
@@ -128,7 +128,7 @@ kiyas is also listed in the official [MCP Registry](https://registry.modelcontex
   "mcpServers": {
     "kiyas": {
       "command": "npx",
-      "args": ["kiyas-cli", "mcp"]
+      "args": ["kiyas-cli@latest", "mcp"]
     }
   }
 }
@@ -139,7 +139,7 @@ kiyas is also listed in the official [MCP Registry](https://registry.modelcontex
 ```toml
 [mcp_servers.kiyas]
 command = "npx"
-args    = ["kiyas-cli", "mcp"]
+args    = ["kiyas-cli@latest", "mcp"]
 ```
 
 ### Figma access for MCP users
@@ -149,7 +149,7 @@ The `compare` tool needs Figma access only when you pass a `figma` URL. Three wa
 **1. Pass your token via the server config** (recommended):
 
 ```bash
-claude mcp add kiyas -e FIGMA_ACCESS_TOKEN=<your-token> -- npx kiyas-cli mcp
+claude mcp add kiyas -e FIGMA_ACCESS_TOKEN=<your-token> -- npx -y kiyas-cli@latest mcp
 ```
 
 or in `.mcp.json` / `mcp.json` / `config.toml`, add an `env` block:
@@ -159,7 +159,7 @@ or in `.mcp.json` / `mcp.json` / `config.toml`, add an `env` block:
   "mcpServers": {
     "kiyas": {
       "command": "npx",
-      "args": ["kiyas-cli", "mcp"],
+      "args": ["kiyas-cli@latest", "mcp"],
       "env": { "FIGMA_ACCESS_TOKEN": "your-token" }
     }
   }
