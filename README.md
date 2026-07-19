@@ -18,6 +18,32 @@ Unlike pixel-diff tools, kiyas uses vision AI to understand _what_ is different 
 
 Just describe the component by name. kiyas finds it in your codebase, screenshots it, and compares it against the Figma design.
 
+Prefer an app over a terminal? There's also a [desktop app](#desktop-app).
+
+---
+
+## Desktop App
+
+A native macOS app for running the same comparisons point-and-click — built for designers and anyone who'd rather not touch a terminal. Pick a project, paste a Figma link (or drop in a screenshot), describe the component, and get the full report in-app. It uses the same engine and the same subscription-based auth: AI calls go through the Claude Code or Codex CLI on your machine, never an API key.
+
+**[⬇ Download the latest release](https://github.com/saiffmirza/kiyas/releases/latest)** (Apple Silicon)
+
+1. Download the `.dmg`, drag **Kiyas** to Applications.
+2. Preview builds aren't notarized yet — on first launch, right-click → Open (or run `xattr -dr com.apple.quarantine /Applications/Kiyas.app`).
+3. Sign in to [Claude Code](https://claude.ai/code) or Codex in any terminal once; the app picks it up from there.
+
+Highlights: project sidebar with dev-server detection, capture preview + crop before comparing, built-in terminal, full dark mode, and a Liquid Glass icon on macOS 26.
+
+To build from source instead:
+
+```bash
+git clone https://github.com/saiffmirza/kiyas && cd kiyas
+npm install
+npm run desktop        # dev mode
+# or package a .app/.dmg:
+cd apps/desktop && npx electron-builder --mac
+```
+
 ---
 
 ## How It Works
@@ -420,6 +446,15 @@ kiyas/  (npm workspaces monorepo)
 │       │       └── tools.ts        # Zod schemas + handlers (compare, get_diff_report, list_issues)
 │       ├── package.json
 │       └── tsup.config.ts
+├── apps/
+│   └── desktop/                    # @kiyas/desktop — Electron app (macOS)
+│       ├── src/
+│       │   ├── main/               # Main process: IPC, capture flow, pty terminal
+│       │   ├── preload/            # Typed context bridge (window.kiyas)
+│       │   └── renderer/           # React UI (cream/navy/gold theme, dark mode)
+│       ├── build/kiyas.icon        # Icon Composer bundle (Liquid Glass icon source)
+│       ├── scripts/gen-icon.mjs    # Renders all icon variants from the Farisi kāf
+│       └── electron-builder.yml
 ├── eval/                           # Golden eval set + scoring harness
 ├── .env.example
 ├── .kiyasrc.example
@@ -440,7 +475,8 @@ kiyas/  (npm workspaces monorepo)
 | AI comparison        | Claude Code CLI or Codex CLI (vision)             |
 | Component resolution | Claude Code CLI / Codex CLI (agent)               |
 | Output               | HTML (default), JSON                              |
-| Build                | tsup                                              |
+| Desktop app          | Electron, electron-vite, React, node-pty + xterm  |
+| Build                | tsup, electron-builder                            |
 | Package manager      | npm                                               |
 
 ---
