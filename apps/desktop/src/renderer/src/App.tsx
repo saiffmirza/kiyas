@@ -39,6 +39,8 @@ export function App() {
   const [tokenError, setTokenError] = useState("");
   const [tokenSaving, setTokenSaving] = useState(false);
   const [termOpen, setTermOpen] = useState(false);
+  // pinned when the drawer opens — the shell's cwd doesn't follow repo selection
+  const [termCwd, setTermCwd] = useState<string | undefined>(undefined);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     try {
       const stored = localStorage.getItem("kiyas.theme");
@@ -159,14 +161,13 @@ export function App() {
     if (phase === "done") refreshHistory(repo);
   }, [phase, repo, refreshHistory]);
 
-  async function setupProvider(provider: "claude" | "codex") {
-    const label = provider === "claude" ? "Claude Code" : "Codex";
+  async function setupProvider(provider: "claude" | "codex" | "browsers") {
     const r = await window.kiyas.setupProvider(provider);
-    setSetupHint(
-      r.ok
-        ? `Finish the ${label} sign-in in Terminal — this updates when you come back.`
-        : r.error ?? "Setup failed."
-    );
+    const hint =
+      provider === "browsers"
+        ? "Chromium is downloading in Terminal — this updates when it finishes."
+        : `Finish the ${provider === "claude" ? "Claude Code" : "Codex"} sign-in in Terminal — this updates when you come back.`;
+    setSetupHint(r.ok ? hint : r.error ?? "Setup failed.");
   }
 
   async function saveToken() {
@@ -387,6 +388,19 @@ export function App() {
                   )}
                 </li>
                 <li>
+                  Screenshot browser
+                  {doctor.browsers.ok ? (
+                    <span className="env-tag">Installed</span>
+                  ) : (
+                    <button
+                      className="env-cta"
+                      onClick={() => setupProvider("browsers")}
+                    >
+                      Install
+                    </button>
+                  )}
+                </li>
+                <li>
                   Figma token
                   {doctor.figmaToken.ok ? (
                     <span className="env-tag">Connected</span>
@@ -409,7 +423,12 @@ export function App() {
             )}
             <button
               className="terminal-btn"
-              onClick={() => setTermOpen((open) => !open)}
+              onClick={() =>
+                setTermOpen((open) => {
+                  if (!open) setTermCwd(repo || undefined);
+                  return !open;
+                })
+              }
             >
               {termOpen
                 ? "Close Terminal"
@@ -474,6 +493,7 @@ export function App() {
               <iframe
                 className="report-fill"
                 title="Kiyas report"
+                sandbox="allow-scripts allow-popups"
                 srcDoc={result.reportHtml}
               />
             </section>
@@ -728,7 +748,10 @@ export function App() {
                 <button
                   className="btn"
                   disabled={phase === "comparing"}
-                  onClick={() => setPhase("idle")}
+                  onClick={() => {
+                    window.kiyas.discardCapture();
+                    setPhase("idle");
+                  }}
                 >
                   Start over
                 </button>
@@ -779,12 +802,12 @@ export function App() {
         {termOpen && (
           <div className="term-drawer">
             <div className="term-bar">
-              <span>Terminal{repo ? ` · ${basename(repo)}` : ""}</span>
+              <span>Terminal{termCwd ? ` · ${basename(termCwd)}` : ""}</span>
               <button title="Close" onClick={() => setTermOpen(false)}>
                 ×
               </button>
             </div>
-            <TerminalPanel cwd={repo || undefined} dark={theme === "dark"} />
+            <TerminalPanel cwd={termCwd} dark={theme === "dark"} />
           </div>
         )}
       </main>

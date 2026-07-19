@@ -30,7 +30,7 @@ const api: KiyasApi = {
     ipcRenderer.on("term-exit", listener);
     return () => ipcRenderer.removeListener("term-exit", listener);
   },
-  setupProvider: (provider: "claude" | "codex") =>
+  setupProvider: (provider: "claude" | "codex" | "browsers") =>
     ipcRenderer.invoke("setup-provider", provider),
   saveFigmaToken: (token: string) =>
     ipcRenderer.invoke("save-figma-token", token),
@@ -38,6 +38,7 @@ const api: KiyasApi = {
   pickRepo: () => ipcRenderer.invoke("pick-repo"),
   pickImage: () => ipcRenderer.invoke("pick-image"),
   capture: (params: CompareRequest) => ipcRenderer.invoke("capture", params),
+  discardCapture: () => ipcRenderer.invoke("capture-discard"),
   cropImpl: () => ipcRenderer.invoke("crop-impl"),
   compareConfirmed: () => ipcRenderer.invoke("compare-confirmed"),
   openReport: (reportPath: string) =>

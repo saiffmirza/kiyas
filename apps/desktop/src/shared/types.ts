@@ -8,6 +8,8 @@ export interface DoctorReport {
   claude: DoctorCheck;
   codex: DoctorCheck;
   figmaToken: DoctorCheck;
+  /** Playwright's Chromium — present for npm installs, missing for DMG-only users. */
+  browsers: DoctorCheck;
 }
 
 export interface CompareRequest {
@@ -93,9 +95,9 @@ export interface KiyasApi {
   termStop: () => Promise<void>;
   onTermData: (cb: (data: string) => void) => () => void;
   onTermExit: (cb: () => void) => () => void;
-  /** Opens Terminal running the provider's install + sign-in flow. */
+  /** Opens Terminal running the install + sign-in flow for a provider or the screenshot browser. */
   setupProvider: (
-    provider: "claude" | "codex"
+    provider: "claude" | "codex" | "browsers"
   ) => Promise<{ ok: boolean; error?: string }>;
   /** Validates the token against the Figma API, then persists it to ~/.kiyasrc. */
   saveFigmaToken: (token: string) => Promise<{ ok: boolean; error?: string }>;
@@ -103,6 +105,8 @@ export interface KiyasApi {
   pickRepo: () => Promise<string | undefined>;
   pickImage: () => Promise<string | undefined>;
   capture: (params: CompareRequest) => Promise<CaptureResponse>;
+  /** Deletes the pending capture's temp files (call when abandoning a preview). */
+  discardCapture: () => Promise<void>;
   cropImpl: () => Promise<CropResponse>;
   compareConfirmed: () => Promise<CompareResponse>;
   onProgress: (cb: (event: DesktopProgressEvent) => void) => () => void;

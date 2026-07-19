@@ -45,7 +45,7 @@ async function render(variant) {
       ctx.clearRect(0, 0, CANVAS, CANVAS);
 
       const inset = (CANVAS - TILE) / 2;
-      if (variant === "tile") {
+      if (variant === "tile" || variant === "tile-dev") {
         ctx.beginPath();
         ctx.roundRect(inset, inset, TILE, TILE, RADIUS);
         ctx.fillStyle = CREAM;
@@ -77,6 +77,32 @@ async function render(variant) {
         ctx.lineJoin = "round";
         ctx.strokeText(CHAR, x, y);
       }
+
+      if (variant === "tile-dev") {
+        const pillW = 400;
+        const pillH = 170;
+        const pillX = inset + TILE - pillW - 44;
+        const pillY = inset + TILE - pillH - 44;
+        ctx.beginPath();
+        ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
+        ctx.fillStyle = "#b8892d";
+        ctx.fill();
+        ctx.font = "600 104px 'Avenir Next'";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = CREAM;
+        const label = "DEV";
+        const tracking = 16;
+        const widths = [...label].map((c) => ctx.measureText(c).width);
+        const total = widths.reduce((a, b) => a + b, 0) + tracking * (label.length - 1);
+        let cx = pillX + pillW / 2 - total / 2;
+        for (let i = 0; i < label.length; i++) {
+          ctx.fillText(label[i], cx + widths[i] / 2, pillY + pillH / 2 + 6);
+          cx += widths[i] + tracking;
+        }
+        ctx.textAlign = "start";
+        ctx.textBaseline = "alphabetic";
+      }
     },
     { variant, FONT, CHAR, CANVAS, TILE, RADIUS, GLYPH_FRACTION, STROKE_FRACTION, NAVY, CREAM, CREAM_GLYPH },
   );
@@ -84,6 +110,7 @@ async function render(variant) {
 
 const outputs = [
   ["tile", join(resourcesDir, "icon.png")], // dock/window icon + Win/Linux base
+  ["tile-dev", join(resourcesDir, "icon-dev.png")], // dev-mode dock icon (npm run desktop)
   ["glyph", join(layersDir, "glyph-navy.png")], // Icon Composer: light appearance
   ["dark", join(layersDir, "glyph-cream.png")], // Icon Composer: dark appearance
   ["mono", join(layersDir, "glyph-mono.png")], // Icon Composer: clear/tinted template

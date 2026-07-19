@@ -64,7 +64,7 @@ jobs:
         # --generate-notes only surfaces merged PRs; commits land on main
         # directly, so build the notes from commit subjects instead.
         run: |
-          PREV=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          PREV=$(git describe --tags --abbrev=0 --match 'v[0-9]*' "$GITHUB_REF_NAME^" 2>/dev/null || true)
           {
             git log --no-merges --pretty='- %s' ${PREV:+$PREV..}$GITHUB_REF_NAME
             echo ""

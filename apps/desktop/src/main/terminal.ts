@@ -4,7 +4,20 @@ import pty from "node-pty";
 
 let proc: pty.IPty | undefined;
 
-export function registerTerminal(win: BrowserWindow): void {
+function ptyEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined) env[key] = value;
+  }
+  return env;
+}
+
+export function registerTerminal(getWin: () => BrowserWindow): void {
+  const stop = () => {
+    proc?.kill();
+    proc = undefined;
+  };
+
   ipcMain.handle("term-start", (_event, cwd?: string) => {
     proc?.kill();
     const shell = process.env.SHELL || "/bin/zsh";
@@ -13,10 +26,21 @@ export function registerTerminal(win: BrowserWindow): void {
       cols: 80,
       rows: 24,
       cwd: cwd || homedir(),
-      env: process.env as Record<string, string>,
+      env: ptyEnv(),
     });
-    proc.onData((data) => win.webContents.send("term-data", data));
-    proc.onExit(() => win.webContents.send("term-exit"));
+    proc.onData((data) => {
+      const win = getWin();
+      if (win.isDestroyed()) {
+        stop();
+        return;
+      }
+      win.webContents.send("term-data", data);
+    });
+    proc.onExit(() => {
+      const win = getWin();
+      if (!win.isDestroyed()) win.webContents.send("term-exit");
+    });
+    getWin().once("closed", stop);
   });
 
   ipcMain.on("term-input", (_event, data: string) => proc?.write(data));
@@ -25,8 +49,5 @@ export function registerTerminal(win: BrowserWindow): void {
     if (cols > 0 && rows > 0) proc?.resize(cols, rows);
   });
 
-  ipcMain.handle("term-stop", () => {
-    proc?.kill();
-    proc = undefined;
-  });
+  ipcMain.handle("term-stop", stop);
 }

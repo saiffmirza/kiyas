@@ -1,10 +1,14 @@
-import { app, BrowserWindow } from "electron";
+import { app, shell, BrowserWindow } from "electron";
 import { writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import icon from "../../resources/icon.png?asset";
+import packagedIcon from "../../resources/icon.png?asset";
+import devIcon from "../../resources/icon-dev.png?asset";
 import { registerIpc } from "./ipc.js";
 import { registerTerminal } from "./terminal.js";
+import { fixPath } from "./shell-env.js";
+
+const icon = app.isPackaged ? packagedIcon : devIcon;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -27,6 +31,22 @@ function createWindow(): BrowserWindow {
     },
   });
 
+  // External links (e.g. from the report iframe) open in the default browser,
+  // never in a child window that would inherit the preload bridge.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:/i.test(url)) shell.openExternal(url);
+    return { action: "deny" };
+  });
+  win.webContents.on("will-navigate", (event, url) => {
+    const appUrl = process.env.ELECTRON_RENDERER_URL;
+    const allowed =
+      url.startsWith("file:") || (appUrl ? url.startsWith(appUrl) : false);
+    if (!allowed) {
+      event.preventDefault();
+      if (/^https?:/i.test(url)) shell.openExternal(url);
+    }
+  });
+
   if (process.env.ELECTRON_RENDERER_URL) {
     win.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
@@ -34,7 +54,7 @@ function createWindow(): BrowserWindow {
   }
 
   const screenshotPath = process.env.KIYAS_SCREENSHOT;
-  if (screenshotPath) {
+  if (screenshotPath && !app.isPackaged) {
     win.webContents.on("did-finish-load", () => {
       setTimeout(async () => {
         const image = await win.webContents.capturePage();
@@ -47,14 +67,16 @@ function createWindow(): BrowserWindow {
   return win;
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await fixPath();
   if (process.platform === "darwin") app.dock.setIcon(icon);
-  const win = createWindow();
-  registerIpc(win);
-  registerTerminal(win);
+  let win = createWindow();
+  const getWin = () => win;
+  registerIpc(getWin);
+  registerTerminal(getWin);
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) win = createWindow();
   });
 });
 

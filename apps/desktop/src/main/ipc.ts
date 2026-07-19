@@ -7,6 +7,7 @@ import {
 } from "electron";
 import { execFile } from "node:child_process";
 import { readFile, readdir, unlink, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -81,11 +82,19 @@ function meanLuma(path: string): number {
 
 const execFileAsync = promisify(execFile);
 
+// Pinned to the bundled Playwright: a bare `npx playwright` resolves the
+// latest release, whose Chromium revision won't match what executablePath()
+// expects here.
+const playwrightVersion: string = createRequire(import.meta.url)(
+  "playwright/package.json"
+).version;
+
 const PROVIDER_SETUP = {
   claude:
     "command -v claude >/dev/null 2>&1 || npm install -g @anthropic-ai/claude-code; claude",
   codex:
     "command -v codex >/dev/null 2>&1 || npm install -g @openai/codex; codex",
+  browsers: `npx playwright@${playwrightVersion} install chromium`,
 } as const;
 
 async function listOpenPorts(): Promise<OpenPort[]> {
@@ -115,13 +124,18 @@ async function listOpenPorts(): Promise<OpenPort[]> {
   }
 }
 
-export function registerIpc(win: BrowserWindow): void {
+export function registerIpc(getWin: () => BrowserWindow): void {
+  const sendProgress = (event: DesktopProgressEvent) => {
+    const win = getWin();
+    if (!win.isDestroyed()) win.webContents.send("compare-progress", event);
+  };
+
   ipcMain.handle("doctor", () => runDoctor());
 
   ipcMain.handle("repos-load", (): RepoState => loadState());
 
   ipcMain.handle("repos-add", async (): Promise<RepoState> => {
-    const result = await dialog.showOpenDialog(win, {
+    const result = await dialog.showOpenDialog(getWin(), {
       title: "Add a project folder",
       properties: ["openDirectory"],
     });
@@ -211,7 +225,7 @@ export function registerIpc(win: BrowserWindow): void {
 
   ipcMain.handle(
     "setup-provider",
-    async (_event, provider: "claude" | "codex") => {
+    async (_event, provider: "claude" | "codex" | "browsers") => {
       const command = PROVIDER_SETUP[provider];
       if (!command) return { ok: false, error: "Unknown provider" };
       if (process.platform !== "darwin") {
@@ -274,7 +288,7 @@ export function registerIpc(win: BrowserWindow): void {
   });
 
   ipcMain.handle("pick-repo", async () => {
-    const result = await dialog.showOpenDialog(win, {
+    const result = await dialog.showOpenDialog(getWin(), {
       title: "Choose the project folder",
       properties: ["openDirectory"],
     });
@@ -282,10 +296,10 @@ export function registerIpc(win: BrowserWindow): void {
   });
 
   ipcMain.handle("pick-image", async () => {
-    const result = await dialog.showOpenDialog(win, {
+    const result = await dialog.showOpenDialog(getWin(), {
       title: "Choose a design screenshot",
       properties: ["openFile"],
-      filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp"] }],
+      filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg"] }],
     });
     return result.filePaths[0];
   });
@@ -297,16 +311,15 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(
     "capture",
     async (_event, params: CompareRequest): Promise<CaptureResponse> => {
-      const send = (event: DesktopProgressEvent) =>
-        win.webContents.send("compare-progress", event);
+      const send = sendProgress;
       await discardPending();
 
+      const tempFiles: string[] = [];
       try {
         const settings = loadSettings();
         const provider = settings.model === "openai" ? "openai" : "claude";
         const aiModel =
           provider === "claude" ? settings.claudeModel : settings.codexModel;
-        const tempFiles: string[] = [];
 
         let designPath: string;
         let metadata: FigmaNodeMetadata | undefined;
@@ -364,7 +377,7 @@ export function registerIpc(win: BrowserWindow): void {
             ),
             viewport: params.viewport,
             selector,
-            scale: captureScale(params.viewport, selector),
+            scale,
             colorScheme,
           });
 
@@ -415,6 +428,9 @@ export function registerIpc(win: BrowserWindow): void {
           implSize: nativeImage.createFromPath(implPath).getSize(),
         };
       } catch (err) {
+        for (const file of tempFiles) {
+          await unlink(file).catch(() => {});
+        }
         return {
           ok: false,
           error: err instanceof Error ? err.message : String(err),
@@ -422,6 +438,8 @@ export function registerIpc(win: BrowserWindow): void {
       }
     }
   );
+
+  ipcMain.handle("capture-discard", () => discardPending());
 
   ipcMain.handle("crop-impl", async (): Promise<CropResponse> => {
     if (!pending) {
@@ -468,8 +486,7 @@ export function registerIpc(win: BrowserWindow): void {
     if (!pending) {
       return { ok: false, error: "No captured pair to compare. Capture first." };
     }
-    const send = (event: DesktopProgressEvent) =>
-      win.webContents.send("compare-progress", event);
+    const send = sendProgress;
 
     try {
       const settings = loadSettings();

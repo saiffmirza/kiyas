@@ -41,6 +41,10 @@ jobs:
             exit 1
           fi
 
+      - run: npm run typecheck
+
+      - run: npm test
+
       - run: npm run build -w @kiyas/desktop
 
       - name: Package .dmg and .zip
