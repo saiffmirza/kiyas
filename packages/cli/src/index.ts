@@ -279,6 +279,7 @@ async function run(opts: CLIOptions) {
     scale: opts.scale,
     fullPage: opts.fullPage,
     selector,
+    focused: Boolean(selector || opts.component),
     colorScheme: opts.dark ? "dark" : undefined,
     wait: opts.wait,
     authState: opts.authState,
@@ -351,6 +352,7 @@ async function runBatchMode(opts: CLIOptions) {
       scale: opts.scale,
       fullPage: opts.fullPage,
       selector,
+      focused: Boolean(selector || resolvedInfo),
       colorScheme: opts.dark ? "dark" : undefined,
       wait: comparison.wait ?? opts.wait,
       authState: comparison.authState ?? config.authState ?? opts.authState,
@@ -381,6 +383,7 @@ interface ComparisonParams {
   scale?: number;
   fullPage?: boolean;
   selector?: string;
+  focused?: boolean;
   colorScheme?: "light" | "dark";
   wait?: number;
   authState?: string;

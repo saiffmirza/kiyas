@@ -714,8 +714,10 @@ export function App() {
               <div className="preview-grid">
                 <div className="preview-col">
                   <div className="preview-label">
-                    Design · {preview.designSize.width}×
-                    {preview.designSize.height}
+                    Design
+                    {preview.designSize
+                      ? ` · ${preview.designSize.width}×${preview.designSize.height}`
+                      : ""}
                   </div>
                   <img src={preview.designPng} alt="Design capture" />
                 </div>

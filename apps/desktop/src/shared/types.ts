@@ -53,7 +53,8 @@ export type CaptureResponse =
       selector?: string;
       resolved?: { filePath: string; url: string; selector?: string };
       warning?: string;
-      designSize: ImageSize;
+      /** Absent when the design isn't a PNG (e.g. a JPEG on non-macOS). */
+      designSize?: ImageSize;
       implSize: ImageSize;
     }
   | { ok: false; error: string };

@@ -50,6 +50,29 @@ export {
   type PlaywrightCaptureOptions,
   type PlaywrightCaptureResult,
 } from "./capture/playwright.js";
+export {
+  captureImplementation,
+  type CaptureImplementationParams,
+  type CaptureImplementationResult,
+} from "./capture/implementation.js";
+export {
+  loadPng,
+  savePng,
+  cropImage,
+  resizeImage,
+  grayThumb,
+  meanLuma,
+  type RawImage,
+} from "./capture/image.js";
+export {
+  selectBestCrop,
+  anchoredCrop,
+  visualDistance,
+  type ElementBox,
+} from "./capture/autocrop.js";
+export { defaultCaptureScale } from "./capture/scale.js";
+export { normalizeToSrgb } from "./capture/srgb.js";
+export { readPngSize, type PngSize } from "./utils/png-size.js";
 export { generateHtmlReport, type HtmlReportOptions } from "./report/html.js";
 export { parseFigmaUrl, type FigmaUrlParts } from "./utils/parse-figma-url.js";
 export { log } from "./utils/logger.js";

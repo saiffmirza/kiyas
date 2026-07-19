@@ -1,10 +1,4 @@
-import {
-  ipcMain,
-  dialog,
-  nativeImage,
-  shell,
-  type BrowserWindow,
-} from "electron";
+import { ipcMain, dialog, shell, type BrowserWindow } from "electron";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile, readdir, unlink, writeFile } from "node:fs/promises";
@@ -14,13 +8,19 @@ import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import {
   captureFigma,
+  captureImplementation,
   captureMismatchWarning,
-  capturePlaywrightDetailed,
+  cropImage,
+  defaultCaptureScale,
+  loadPng,
   loadReport,
   loadSettings,
+  normalizeToSrgb,
+  readPngSize,
   resolveComponent,
   resolveFigmaToken,
   runComparison,
+  savePng,
   type FigmaNodeMetadata,
 } from "@kiyas/core";
 import { runDoctor } from "./doctor.js";
@@ -57,213 +57,11 @@ async function discardPending(): Promise<void> {
   pending = undefined;
 }
 
-function captureScale(viewport: string, focused: boolean): number {
-  // Component resolution produces a selector later, so `focused` (not just an
-  // explicit selector) must force retina — designs are usually 2x screenshots
-  // or 2x Figma exports, and a 1x capture makes the AI misread every measurement.
-  if (focused) return 2;
-  const match = viewport.match(/^(\d+)x(\d+)$/);
-  if (!match) return 1;
-  return Math.max(parseInt(match[1], 10), parseInt(match[2], 10)) <= 1000 ? 2 : 1;
-}
-
 async function toDataUrl(path: string): Promise<string> {
   return `data:image/png;base64,${(await readFile(path)).toString("base64")}`;
 }
 
-/** Mean luminance of an image, 0 (black) to 1 (white). */
-function meanLuma(path: string): number {
-  const image = nativeImage.createFromPath(path);
-  const { width } = image.getSize();
-  const sample = width > 64 ? image.resize({ width: 64 }) : image;
-  const bitmap = sample.toBitmap(); // BGRA
-  let sum = 0;
-  for (let i = 0; i < bitmap.length; i += 4) {
-    sum += 0.114 * bitmap[i] + 0.587 * bitmap[i + 1] + 0.299 * bitmap[i + 2];
-  }
-  return sum / (bitmap.length / 4) / 255;
-}
-
-function grayThumb(image: Electron.NativeImage, w: number, h: number): Uint8Array {
-  const bitmap = image.resize({ width: w, height: h }).toBitmap(); // BGRA
-  const out = new Uint8Array(w * h);
-  for (let i = 0; i < out.length; i++) {
-    const j = i * 4;
-    out[i] = 0.114 * bitmap[j] + 0.587 * bitmap[j + 1] + 0.299 * bitmap[j + 2];
-  }
-  return out;
-}
-
-/** Mean absolute grayscale difference on 48×48 thumbnails, 0 = identical. */
-function visualDistance(
-  a: Electron.NativeImage,
-  b: Electron.NativeImage
-): number {
-  const size = 48;
-  const ta = grayThumb(a, size, size);
-  const tb = grayThumb(b, size, size);
-  let sum = 0;
-  for (let i = 0; i < ta.length; i++) sum += Math.abs(ta[i] - tb[i]);
-  return sum / ta.length;
-}
-
-interface ElementBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-/** Design-aspect crop of the full page starting at the element's top-left. */
-function anchoredCrop(
-  fullPage: Electron.NativeImage,
-  design: Electron.NativeImage,
-  box: ElementBox
-): Electron.NativeImage | undefined {
-  const full = fullPage.getSize();
-  const d = design.getSize();
-  const x = Math.max(0, Math.round(box.x));
-  const y = Math.max(0, Math.round(box.y));
-  const width = Math.min(Math.round(box.width), full.width - x);
-  const height = Math.min(
-    Math.round((width * d.height) / d.width),
-    full.height - y
-  );
-  if (width < 8 || height < 8) return undefined;
-  return fullPage.crop({ x, y, width, height });
-}
-
-function scanBest(
-  page: Uint8Array,
-  pageW: number,
-  pageH: number,
-  tpl: Uint8Array,
-  tplW: number,
-  tplH: number,
-  x0: number,
-  x1: number,
-  y0: number,
-  y1: number,
-  sample: number
-): { x: number; y: number } {
-  let best = Infinity;
-  let bestX = Math.max(0, x0);
-  let bestY = Math.max(0, y0);
-  for (let y = Math.max(0, y0); y <= y1 && y + tplH <= pageH; y++) {
-    for (let x = Math.max(0, x0); x <= x1 && x + tplW <= pageW; x++) {
-      let sum = 0;
-      for (let wy = 0; wy < tplH; wy += sample) {
-        const pageRow = (y + wy) * pageW + x;
-        const tplRow = wy * tplW;
-        for (let wx = 0; wx < tplW; wx += sample) {
-          sum += Math.abs(page[pageRow + wx] - tpl[tplRow + wx]);
-        }
-      }
-      if (sum < best) {
-        best = sum;
-        bestX = x;
-        bestY = y;
-      }
-    }
-  }
-  return { x: bestX, y: bestY };
-}
-
-/**
- * Slide a design-shaped window over the full-page capture and crop the
- * best-matching region, refining coarse-to-fine (160px → 640px → full res) so
- * the final position is pixel-accurate. `targetW` is one hypothesis for the
- * design's rendered width in page pixels — callers try several (element
- * width, design width at 1x/2x) and let the visual check pick the winner.
- */
-function templateMatchCrop(
-  fullPage: Electron.NativeImage,
-  design: Electron.NativeImage,
-  targetW: number
-): Electron.NativeImage | undefined {
-  const full = fullPage.getSize();
-  const d = design.getSize();
-  const targetH = Math.round((targetW * d.height) / d.width);
-  if (targetW < 8 || targetH < 8) return undefined;
-  if (targetW > full.width || targetH > full.height) return undefined;
-
-  let pos: { x: number; y: number } | undefined;
-  let prevFactor = 0;
-  for (const stageWidth of [160, 640, full.width]) {
-    const factor = Math.min(1, stageWidth / full.width);
-    if (pos && factor <= prevFactor) continue;
-    const pageW = Math.max(1, Math.round(full.width * factor));
-    const pageH = Math.max(1, Math.round(full.height * factor));
-    const winW = Math.max(2, Math.round(targetW * factor));
-    const winH = Math.max(2, Math.round(targetH * factor));
-    if (winW > pageW || winH > pageH) return undefined;
-
-    const pageThumb = grayThumb(fullPage, pageW, pageH);
-    const designThumb = grayThumb(design, winW, winH);
-    const sample = factor === 1 ? 4 : 2;
-
-    if (!pos) {
-      pos = scanBest(
-        pageThumb, pageW, pageH, designThumb, winW, winH,
-        0, pageW, 0, pageH, sample
-      );
-    } else {
-      // map the previous stage's position up and search a small neighborhood
-      const cx = Math.round((pos.x / prevFactor) * factor);
-      const cy = Math.round((pos.y / prevFactor) * factor);
-      const radius = Math.ceil(factor / prevFactor) + 2;
-      pos = scanBest(
-        pageThumb, pageW, pageH, designThumb, winW, winH,
-        cx - radius, cx + radius, cy - radius, cy + radius, sample
-      );
-    }
-    prevFactor = factor;
-  }
-  if (!pos) return undefined;
-
-  return fullPage.crop({
-    x: Math.min(pos.x, full.width - targetW),
-    y: Math.min(pos.y, full.height - targetH),
-    width: targetW,
-    height: targetH,
-  });
-}
-
 const execFileAsync = promisify(execFile);
-
-/**
- * macOS screenshots are tagged Display P3; the comparison model (and our own
- * pixel math) reads raw values, so the same color decodes differently between
- * a P3 design and an sRGB browser capture. Convert to sRGB when possible.
- */
-async function normalizeToSrgb(
-  path: string,
-  tempFiles: string[]
-): Promise<string> {
-  if (process.platform !== "darwin") return path;
-  try {
-    const { stdout } = await execFileAsync("sips", ["-g", "profile", path], {
-      timeout: 5000,
-    });
-    if (/sRGB/i.test(stdout)) return path;
-    const out = join(tmpdir(), `kiyas-srgb-${Date.now()}.png`);
-    await execFileAsync(
-      "sips",
-      [
-        "--matchTo",
-        "/System/Library/ColorSync/Profiles/sRGB Profile.icc",
-        path,
-        "--out",
-        out,
-      ],
-      { timeout: 15000 }
-    );
-    tempFiles.push(out);
-    return out;
-  } catch {
-    return path;
-  }
-}
 
 // Pinned to the bundled Playwright: a bare `npx playwright` resolves the
 // latest release, whose Chromium revision won't match what executablePath()
@@ -534,13 +332,17 @@ export function registerIpc(getWin: () => BrowserWindow): void {
 
         let designPath: string;
         let metadata: FigmaNodeMetadata | undefined;
-        const scale = captureScale(
+        const scale = defaultCaptureScale(
           params.viewport,
           Boolean(params.selector || params.component)
         );
 
         if (params.designImage) {
-          designPath = await normalizeToSrgb(resolve(params.designImage), tempFiles);
+          designPath = await normalizeToSrgb(
+            resolve(params.designImage),
+            tmpdir(),
+            tempFiles
+          );
         } else {
           if (!params.figmaUrl) {
             throw new Error("Provide a Figma URL or a design screenshot.");
@@ -581,98 +383,18 @@ export function registerIpc(getWin: () => BrowserWindow): void {
           send({ step: "resolve", status: "done", message: r.filePath });
         }
 
-        send({ step: "screenshot", status: "start", message: targetUrl });
-        const captureOnce = (colorScheme?: "light" | "dark") => {
-          const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-          return capturePlaywrightDetailed({
-            url: targetUrl,
-            outputPath: join(tmpdir(), `kiyas-capture-${stamp}.png`),
-            fullPagePath: selector
-              ? join(tmpdir(), `kiyas-fullpage-${stamp}.png`)
-              : undefined,
-            viewport: params.viewport,
-            selector,
-            scale,
-            colorScheme,
-          });
-        };
-        const trackTemps = (cap: {
-          imagePath: string;
-          fullPagePath?: string;
-        }) => {
-          tempFiles.push(cap.imagePath);
-          if (cap.fullPagePath) tempFiles.push(cap.fullPagePath);
-        };
-
-        let capture = await captureOnce(undefined);
-        trackTemps(capture);
-
-        // Silently match the design's theme: if the design is clearly dark but
-        // the capture came back light (or vice versa), retry with the emulated
-        // scheme flipped and keep whichever capture is closer in brightness.
-        const designLuma = meanLuma(designPath);
-        const implLuma = meanLuma(capture.imagePath);
-        const wantsDark = designLuma < 0.4 && implLuma > 0.55;
-        const wantsLight = designLuma > 0.6 && implLuma < 0.45;
-        if (wantsDark || wantsLight) {
-          const retry = await captureOnce(wantsDark ? "dark" : "light");
-          trackTemps(retry);
-          const retryLuma = meanLuma(retry.imagePath);
-          if (
-            Math.abs(retryLuma - designLuma) < Math.abs(implLuma - designLuma)
-          ) {
-            capture = retry;
-          }
-        }
-        send({ step: "screenshot", status: "done" });
-
-        let implPath = capture.imagePath;
-        let warning = await captureMismatchWarning(designPath, implPath);
-
-        // The element screenshot only matches the design when the design was
-        // cropped exactly to the component. Build alternative crops of the
-        // full page — one anchored at the element, plus template matches at a
-        // few scale hypotheses (the design may cover more or less of the page,
-        // at 1x or retina pixels) — and keep whichever looks most like the
-        // design.
-        if (capture.fullPagePath && capture.elementBox) {
-          const design = nativeImage.createFromPath(designPath);
-          const fullPage = nativeImage.createFromPath(capture.fullPagePath);
-          const element = nativeImage.createFromPath(implPath);
-          const fullWidth = fullPage.getSize().width;
-          const designWidth = design.getSize().width;
-          const widths = [
-            ...new Set([
-              Math.round(capture.elementBox.width),
-              designWidth,
-              designWidth * 2,
-              Math.round(designWidth / 2),
-            ]),
-          ].filter((w) => w >= 8 && w <= fullWidth);
-          const candidates = [
-            element,
-            anchoredCrop(fullPage, design, capture.elementBox),
-            ...widths.map((w) => templateMatchCrop(fullPage, design, w)),
-          ].filter((c): c is Electron.NativeImage => c !== undefined);
-
-          let winner = element;
-          let bestDistance = Infinity;
-          for (const candidate of candidates) {
-            const distance = visualDistance(design, candidate);
-            if (distance < bestDistance) {
-              bestDistance = distance;
-              winner = candidate;
-            }
-          }
-
-          if (winner !== element) {
-            const cropPath = join(tmpdir(), `kiyas-autocrop-${Date.now()}.png`);
-            await writeFile(cropPath, winner.toPNG());
-            tempFiles.push(cropPath);
-            implPath = cropPath;
-            warning = await captureMismatchWarning(designPath, implPath);
-          }
-        }
+        const cap = await captureImplementation({
+          targetUrl,
+          viewport: params.viewport,
+          selector,
+          scale,
+          designPath,
+          outputDir: tmpdir(),
+          tempFiles,
+          onProgress: send,
+        });
+        const implPath = cap.implPath;
+        const warning = cap.warning;
 
         pending = {
           params,
@@ -693,8 +415,8 @@ export function registerIpc(getWin: () => BrowserWindow): void {
           selector,
           resolved,
           warning,
-          designSize: nativeImage.createFromPath(designPath).getSize(),
-          implSize: nativeImage.createFromPath(implPath).getSize(),
+          designSize: await readPngSize(designPath),
+          implSize: (await readPngSize(implPath)) ?? { width: 0, height: 0 },
         };
       } catch (err) {
         for (const file of tempFiles) {
@@ -715,21 +437,26 @@ export function registerIpc(getWin: () => BrowserWindow): void {
       return { ok: false, error: "Nothing captured to crop." };
     }
     try {
-      const design = nativeImage.createFromPath(pending.designPath).getSize();
-      const impl = nativeImage.createFromPath(pending.implPath);
-      const implSize = impl.getSize();
+      const design = await readPngSize(pending.designPath);
+      if (!design) {
+        return {
+          ok: false,
+          error: "Cropping needs a PNG design image.",
+        };
+      }
+      const impl = await loadPng(pending.implPath);
       const cropHeight = Math.min(
-        implSize.height,
-        Math.round((implSize.width * design.height) / design.width)
+        impl.height,
+        Math.round((impl.width * design.height) / design.width)
       );
-      const cropped = impl.crop({
+      const cropped = cropImage(impl, {
         x: 0,
         y: 0,
-        width: implSize.width,
+        width: impl.width,
         height: cropHeight,
       });
       const cropPath = join(tmpdir(), `kiyas-crop-${Date.now()}.png`);
-      await writeFile(cropPath, cropped.toPNG());
+      await savePng(cropped, cropPath);
       pending.tempFiles.push(cropPath);
       pending.implPath = cropPath;
 
@@ -740,7 +467,7 @@ export function registerIpc(getWin: () => BrowserWindow): void {
       return {
         ok: true,
         implPng: await toDataUrl(cropPath),
-        implSize: cropped.getSize(),
+        implSize: { width: cropped.width, height: cropped.height },
         warning,
       };
     } catch (err) {

@@ -82,6 +82,12 @@ export const compareInputSchema = z.object({
     .string()
     .optional()
     .describe("CSS selector to screenshot a specific element"),
+  colorScheme: z
+    .enum(["light", "dark"])
+    .optional()
+    .describe(
+      "Force prefers-color-scheme for the capture. Default: auto — kiyas detects the design's brightness and retries in the matching scheme."
+    ),
   wait: z
     .number()
     .int()
@@ -202,6 +208,8 @@ export async function handleCompare(input: CompareInput) {
     scale: input.scale,
     fullPage: input.fullPage,
     selector,
+    colorScheme: input.colorScheme,
+    focused: Boolean(selector || (input.component && !input.target)),
     wait: input.wait,
     authState: input.authState,
     threshold,

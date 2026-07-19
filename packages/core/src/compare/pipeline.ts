@@ -5,13 +5,15 @@ import { createHash, randomBytes } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { captureFigma, type FigmaNodeMetadata } from "../capture/figma.js";
-import { capturePlaywright } from "../capture/playwright.js";
+import { captureImplementation } from "../capture/implementation.js";
+import { defaultCaptureScale } from "../capture/scale.js";
+import { normalizeToSrgb } from "../capture/srgb.js";
+import { captureMismatchWarning } from "../capture/warning.js";
 import { generateHtmlReport } from "../report/html.js";
 import { compareImages, parseDiscrepancies, type Discrepancy } from "./index.js";
 import { voteOnFindings } from "./ensemble.js";
 import { buildComparisonPrompt } from "./prompt.js";
 import { generateComparisonName } from "./name.js";
-import { readPngSize } from "../utils/png-size.js";
 import { VERSION } from "../version.js";
 
 const execFileAsync = promisify(execFile);
@@ -32,6 +34,12 @@ export interface RunComparisonParams {
   /** Figma node metadata to include in the comparison prompt when `designImage` came from a prior Figma export. */
   figmaMetadata?: FigmaNodeMetadata;
   targetUrl: string;
+  /**
+   * Whether the capture targets one component (explicit selector or a
+   * component description). Drives the adaptive-scale default; defaults to
+   * `Boolean(selector)` when omitted.
+   */
+  focused?: boolean;
   model: "claude" | "openai";
   /** Model ID/alias to pin the provider CLI to. */
   aiModel?: string;
@@ -82,6 +90,8 @@ export interface RunManifest {
   fullPage: boolean;
   threshold: string;
   colorScheme?: "light" | "dark";
+  /** Set when the full-page candidate search replaced the raw element shot. */
+  autoCropped?: boolean;
   provider: "claude" | "openai";
   aiModel?: string;
   runs: number;
@@ -116,49 +126,6 @@ export interface PersistedReport extends ComparisonResult {
   manifest: RunManifest;
 }
 
-function defaultScale(viewport: string, selector?: string): number {
-  if (selector) return 2;
-  const match = viewport.match(/^(\d+)x(\d+)$/);
-  if (!match) return 1;
-  const longSide = Math.max(parseInt(match[1], 10), parseInt(match[2], 10));
-  return longSide <= 1000 ? 2 : 1;
-}
-
-/**
- * macOS screenshots are tagged Display P3; the comparison model reads raw
- * pixel values, so the same color decodes differently between a P3 design and
- * an sRGB browser capture. Convert to sRGB where the OS tooling exists.
- */
-async function normalizeToSrgb(
-  path: string,
-  outDir: string,
-  tempFiles: string[]
-): Promise<string> {
-  if (process.platform !== "darwin") return path;
-  try {
-    const { stdout } = await execFileAsync("sips", ["-g", "profile", path], {
-      timeout: 5000,
-    });
-    if (/sRGB/i.test(stdout)) return path;
-    const out = join(outDir, "design-srgb.png");
-    await execFileAsync(
-      "sips",
-      [
-        "--matchTo",
-        "/System/Library/ColorSync/Profiles/sRGB Profile.icc",
-        path,
-        "--out",
-        out,
-      ],
-      { timeout: 15000 }
-    );
-    tempFiles.push(out);
-    return out;
-  } catch {
-    return path;
-  }
-}
-
 async function cliVersion(
   provider: "claude" | "openai"
 ): Promise<string | undefined> {
@@ -184,35 +151,7 @@ function newReportId(): string {
   return `${ts}_${rand}`;
 }
 
-/**
- * Sanity check that two captures plausibly show the same component.
- * Returns a human-readable warning when the implementation capture is a tiny
- * sliver or its aspect ratio is wildly different from the design's — the
- * classic symptom of a wrong selector (e.g. a bare `h1` instead of the card
- * that contains it).
- */
-export async function captureMismatchWarning(
-  designPath: string,
-  implPath: string
-): Promise<string | undefined> {
-  const [design, impl] = await Promise.all([
-    readPngSize(designPath),
-    readPngSize(implPath),
-  ]);
-  if (!design || !impl) return undefined;
-
-  if (impl.width < 80 || impl.height < 80) {
-    return `Implementation capture is only ${impl.width}×${impl.height}px — the selector likely matched a single element inside the component instead of the component itself.`;
-  }
-
-  const ratio =
-    design.width / design.height / (impl.width / impl.height);
-  if (ratio > 2.5 || ratio < 0.4) {
-    return `Capture shapes differ a lot (design ${design.width}×${design.height}, implementation ${impl.width}×${impl.height}) — the screenshot may not cover the same region as the design.`;
-  }
-
-  return undefined;
-}
+export { captureMismatchWarning };
 
 export function defaultReportsDir(cwd: string = process.cwd()): string {
   return join(cwd, ".kiyas", "reports");
@@ -244,7 +183,11 @@ export async function runComparison(
   const reportDir = join(reportsDir, reportId);
   await mkdir(reportDir, { recursive: true });
   const scale =
-    params.scale ?? defaultScale(params.viewport, params.selector);
+    params.scale ??
+    defaultCaptureScale(
+      params.viewport,
+      params.focused ?? Boolean(params.selector)
+    );
 
   try {
     let designPath: string;
@@ -298,6 +241,8 @@ export async function runComparison(
     designPath = await normalizeToSrgb(designPath, reportDir, tempFiles);
 
     let implPath: string;
+    let usedColorScheme = params.colorScheme;
+    let autoCropped = false;
     if (params.implImage) {
       const source = resolve(params.implImage);
       if (!existsSync(source)) {
@@ -306,23 +251,24 @@ export async function runComparison(
       implPath = join(reportDir, "impl.png");
       await copyFile(source, implPath);
     } else {
-      progress({
-        step: "screenshot",
-        status: "start",
-        message: params.targetUrl,
-      });
-      implPath = await capturePlaywright({
-        url: params.targetUrl,
-        outputPath: join(reportDir, "impl.png"),
+      const cap = await captureImplementation({
+        targetUrl: params.targetUrl,
         viewport: params.viewport,
         selector: params.selector,
         wait: params.wait,
         scale,
         fullPage: params.fullPage,
-        colorScheme: params.colorScheme,
         authState: params.authState,
+        colorScheme: params.colorScheme,
+        designPath,
+        outputDir: reportDir,
+        tempFiles,
+        onProgress: progress,
       });
-      progress({ step: "screenshot", status: "done" });
+      implPath = join(reportDir, "impl.png");
+      await copyFile(cap.implPath, implPath);
+      usedColorScheme = cap.usedColorScheme;
+      autoCropped = cap.autoCropped;
     }
 
     const captureWarning = await captureMismatchWarning(designPath, implPath);
@@ -423,7 +369,8 @@ export async function runComparison(
       scale,
       fullPage: params.fullPage ?? !params.selector,
       threshold: params.threshold,
-      colorScheme: params.colorScheme,
+      colorScheme: usedColorScheme,
+      autoCropped: autoCropped || undefined,
       provider: params.model,
       aiModel: params.aiModel,
       runs: runCount,
