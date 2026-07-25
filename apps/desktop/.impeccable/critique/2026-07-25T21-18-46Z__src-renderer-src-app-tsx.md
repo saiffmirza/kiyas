@@ -8,6 +8,48 @@ p1_count: 3
 timestamp: 2026-07-25T21-18-46Z
 slug: src-renderer-src-app-tsx
 ---
+
+> **⚠️ Point-in-time snapshot — partially resolved. Do not read the body as current state.**
+>
+> Everything below describes `App.tsx` as of 2026-07-25, *before* any fixes. The 21/40
+> score, the "30 of 54 pairings fail" contrast figures, and the two P0s are all pre-fix.
+> Kept in the repo because `/impeccable polish` consumes it as a backlog and because
+> KIY-14…22 cite it for evidence.
+>
+> **Resolved in PR #3** (`fix(desktop): meet WCAG AA in both themes and make the UI keyboard-operable`):
+>
+> - **P0 — keyboard unreachable, no focus indicators.** Rows are real buttons, hover-revealed
+>   controls stay in the tab order, every button has a `:focus-visible` ring, plus `<h1>`,
+>   input labels, `aria-pressed`/`aria-current`/`role="alert"`/`aria-live`, non-colour state
+>   text, 24px hit areas, and a reduced-motion opt-out.
+> - **P0 — contrast.** 51/51 pairings now pass AA in both themes, verified against the
+>   shipped `theme.css`. `--gold-ink` and `--ink-on-gold` added; `--ink-faint`,
+>   `--text-secondary`, and `--amber` darkened. DESIGN.md's two rules that had *prescribed*
+>   AA failures were amended, and the floor is now encoded as three named rules.
+> - The `side-tab` gilt left border on selected rows was removed in the same pass.
+>
+> **Still open**, tracked as Linear issues rather than here:
+>
+> | Finding in this snapshot | Ticket |
+> |---|---|
+> | P1 — "before any AI runs" is false | KIY-14 |
+> | P1 — mid-run repo switch misfiles the report | KIY-15 |
+> | P1 — no cancel, no elapsed time | KIY-16 |
+> | P1 — runs launch into known-failing environments; unclassified error card | KIY-17 |
+> | P2 — approval gate has no comparison affordances | KIY-18 |
+> | Minor — bare `0 discrepancies`, result drops its inputs, re-run leaks a selector | KIY-19 |
+> | Minor — dark-theme launch flashes parchment | KIY-20 |
+> | Minor — report frame overflows under the update banner | KIY-21 |
+> | Detector debt — off-ramp type steps, off-scale radii, dead CSS | KIY-22 |
+>
+> Two findings were resolved by judgement rather than code and need no ticket: the gilt
+> count on the approval screen (gilt is no longer a foreground, so the count is moot), and
+> `.side-hint` setting prose in gilt (now Gilt Ink).
+>
+> **Safe to delete** once KIY-14…22 close. The better move is re-running
+> `/impeccable critique src/renderer/src/App.tsx`, which writes a fresh snapshot and gives
+> the trend line a second point off 21/40.
+
 Method: dual-agent (A: ad1461acf74b4623f · B: a499f13d3de4217bd)
 
 ## Design Health Score
