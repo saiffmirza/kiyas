@@ -296,21 +296,21 @@ export function App() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
+      <aside className="sidebar" aria-label="Projects and environment">
+        <h1 className="sidebar-brand">
           <img
             src={theme === "dark" ? wordmarkDark : wordmark}
             alt="kiyas"
             className="brand-mark"
           />
-        </div>
+        </h1>
 
         <div className="side-section">
           <div className="side-heading">
-            <span>Projects</span>
+            <span id="projects-heading">Projects</span>
             <button
               className="side-add"
-              title="Add a project folder"
+              aria-label="Add a project folder"
               onClick={async () => setRepoState(await window.kiyas.reposAdd())}
             >
               +
@@ -322,24 +322,25 @@ export function App() {
               with it.
             </p>
           )}
-          <ul className="repo-list">
+          <ul className="repo-list" aria-labelledby="projects-heading">
             {repoState.repos.map((path) => (
-              <li
-                key={path}
-                className={path === repo ? "selected" : ""}
-                title={path}
-                onClick={async () =>
-                  setRepoState(await window.kiyas.reposSelect(path))
-                }
-              >
-                <span className="repo-name">{basename(path)}</span>
+              <li key={path} className={path === repo ? "selected" : ""}>
+                <button
+                  className="row-select"
+                  title={path}
+                  aria-current={path === repo ? "true" : undefined}
+                  onClick={async () =>
+                    setRepoState(await window.kiyas.reposSelect(path))
+                  }
+                >
+                  <span className="repo-name">{basename(path)}</span>
+                </button>
                 <button
                   className="repo-remove"
-                  title="Remove from list"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    setRepoState(await window.kiyas.reposRemove(path));
-                  }}
+                  aria-label={`Remove ${basename(path)} from the list`}
+                  onClick={async () =>
+                    setRepoState(await window.kiyas.reposRemove(path))
+                  }
                 >
                   ×
                 </button>
@@ -351,23 +352,28 @@ export function App() {
         <div className="sidebar-bottom">
           <div className="side-section">
             <div className="side-heading">
-              <span>Dev servers</span>
+              <span id="ports-heading">Dev servers</span>
             </div>
             {ports.length === 0 && (
               <p className="side-empty">
                 None running. Start one in your project, e.g. npm run dev.
               </p>
             )}
-            <ul className="port-list">
+            <ul className="port-list" aria-labelledby="ports-heading">
               {ports.map((p) => (
                 <li
                   key={p.port}
                   className={p.port === selectedPort ? "selected" : ""}
-                  onClick={() => setSelectedPort(p.port)}
                 >
-                  <span className="port-dot" />
-                  <span className="port-num">:{p.port}</span>
-                  <span className="port-proc">{p.process}</span>
+                  <button
+                    className="row-select"
+                    aria-current={p.port === selectedPort ? "true" : undefined}
+                    onClick={() => setSelectedPort(p.port)}
+                  >
+                    <span className="port-dot" aria-hidden="true" />
+                    <span className="port-num">:{p.port}</span>
+                    <span className="port-proc">{p.process}</span>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -375,9 +381,16 @@ export function App() {
 
           <div className="sidebar-footer">
             <div className="side-heading">
-              <button className="side-toggle" onClick={toggleConnections}>
+              <button
+                className="side-toggle"
+                aria-expanded={connectionsOpen}
+                onClick={toggleConnections}
+              >
                 <span>Connections</span>
-                <span className={`caret${connectionsOpen ? " open" : ""}`}>
+                <span
+                  className={`caret${connectionsOpen ? " open" : ""}`}
+                  aria-hidden="true"
+                >
                   ▸
                 </span>
               </button>
@@ -391,6 +404,7 @@ export function App() {
                   ) : (
                     <button
                       className="env-cta"
+                      aria-label="Set up Claude Code"
                       onClick={() => setupProvider("claude")}
                     >
                       Set up
@@ -404,6 +418,7 @@ export function App() {
                   ) : (
                     <button
                       className="env-cta"
+                      aria-label="Set up Codex"
                       onClick={() => setupProvider("codex")}
                     >
                       Set up
@@ -417,6 +432,7 @@ export function App() {
                   ) : (
                     <button
                       className="env-cta"
+                      aria-label="Install the screenshot browser"
                       onClick={() => setupProvider("browsers")}
                     >
                       Install
@@ -430,6 +446,8 @@ export function App() {
                   ) : (
                     <button
                       className="env-cta"
+                      aria-label="Add a Figma token"
+                      aria-expanded={tokenPanelOpen}
                       onClick={() => {
                         setTokenPanelOpen((open) => !open);
                         setSetupHint("");
@@ -441,8 +459,10 @@ export function App() {
                 </li>
               </ul>
             )}
-            {connectionsOpen && setupHint && (
-              <p className="side-hint">{setupHint}</p>
+            {connectionsOpen && (
+              <p className="side-hint" role="status">
+                {setupHint}
+              </p>
             )}
             <button
               className="terminal-btn"
@@ -467,14 +487,16 @@ export function App() {
           <div className="theme-switch">
             <button
               className={theme === "light" ? "active" : ""}
-              title="Light mode"
+              aria-label="Light mode"
+              aria-pressed={theme === "light"}
               onClick={() => setTheme("light")}
             >
               ☀
             </button>
             <button
               className={theme === "dark" ? "active" : ""}
-              title="Dark mode"
+              aria-label="Dark mode"
+              aria-pressed={theme === "dark"}
               onClick={() => setTheme("dark")}
             >
               ☾
@@ -495,7 +517,7 @@ export function App() {
             </button>
             <button
               className="update-dismiss"
-              title="Dismiss until next launch"
+              aria-label="Dismiss until next launch"
               onClick={() => setUpdateDismissed(true)}
             >
               ✕
@@ -558,6 +580,7 @@ export function App() {
                     type="text"
                     value={tokenValue}
                     placeholder="figd_…"
+                    aria-label="Figma personal access token"
                     onChange={(e) => setTokenValue(e.target.value)}
                   />
                 </div>
@@ -576,7 +599,7 @@ export function App() {
                 </button>
               </div>
               {tokenError && (
-                <div className="error-box" style={{ marginTop: 12 }}>
+                <div className="error-box" role="alert" style={{ marginTop: 12 }}>
                   {tokenError}
                 </div>
               )}
@@ -597,12 +620,14 @@ export function App() {
             <div className="tabs">
               <button
                 className={designTab === "figma" ? "active" : ""}
+                aria-pressed={designTab === "figma"}
                 onClick={() => setDesignTab("figma")}
               >
                 Figma link
               </button>
               <button
                 className={designTab === "image" ? "active" : ""}
+                aria-pressed={designTab === "image"}
                 onClick={() => setDesignTab("image")}
               >
                 Screenshot
@@ -614,6 +639,7 @@ export function App() {
                   type="text"
                   value={figmaUrl}
                   placeholder="https://www.figma.com/design/…?node-id=…"
+                  aria-label="Figma frame link"
                   onChange={(e) => setFigmaUrl(e.target.value)}
                 />
               </div>
@@ -635,10 +661,11 @@ export function App() {
             )}
 
             <div className="field">
-              <label>
+              <label htmlFor="component-input">
                 Which component? <span className="hint">optional — AI finds it in the code</span>
               </label>
               <input
+                id="component-input"
                 type="text"
                 value={component}
                 placeholder='e.g. "the event header on the redemption screen"'
@@ -654,9 +681,9 @@ export function App() {
                     ? "Comparing…"
                     : "Compare"}
               </button>
-              {!busy && missingStep && (
-                <span className="run-hint">First, {missingStep}.</span>
-              )}
+              <span className="run-hint" role="status">
+                {!busy && missingStep ? `First, ${missingStep}.` : ""}
+              </span>
             </div>
           </section>
 
@@ -664,28 +691,26 @@ export function App() {
             <section className="how-it-works">
               <h3>How it works</h3>
               <ol className="steps">
-                <li className={repo && targetUrl ? "done" : "current"}>
-                  <span className="diamond" />
-                  Pick your project and its running dev server in the sidebar
-                </li>
-                <li
-                  className={
-                    !repo || !targetUrl
-                      ? ""
-                      : hasDesign
-                        ? "done"
-                        : "current"
-                  }
-                >
-                  <span className="diamond" />
-                  Paste a Figma frame link, or use a screenshot of the design
-                </li>
-                <li
-                  className={repo && targetUrl && hasDesign ? "current" : ""}
-                >
-                  <span className="diamond" />
-                  Compare — you approve the captured pair before any AI runs
-                </li>
+                {[
+                  {
+                    state: repo && targetUrl ? "done" : "current",
+                    text: "Pick your project and its running dev server in the sidebar",
+                  },
+                  {
+                    state: !repo || !targetUrl ? "" : hasDesign ? "done" : "current",
+                    text: "Paste a Figma frame link, or use a screenshot of the design",
+                  },
+                  {
+                    state: repo && targetUrl && hasDesign ? "current" : "",
+                    text: "Compare — you approve the captured pair before any AI runs",
+                  },
+                ].map(({ state, text }) => (
+                  <li key={text} className={state}>
+                    <span className="diamond" aria-hidden="true" />
+                    {text}
+                    {state && <span className="sr-only"> — {state}</span>}
+                  </li>
+                ))}
               </ol>
             </section>
           )}
@@ -694,40 +719,44 @@ export function App() {
             <section className="history">
               <h3>Recent comparisons · {basename(repo)}</h3>
               <ul className="history-list">
-                {history.map((h) => (
-                  <li key={h.reportId} onClick={() => openPastReport(h.reportId)}>
-                    <span className="history-name">
-                      {h.name || h.reportId.slice(0, 10).replace("_", " ")}
-                    </span>
-                    <span className="history-date">{h.date}</span>
-                    <span className="history-counts">
-                      {h.summary.high > 0 && (
-                        <em className="c-high">{h.summary.high} high</em>
-                      )}
-                      {h.summary.medium > 0 && (
-                        <em className="c-medium">{h.summary.medium} med</em>
-                      )}
-                      {h.summary.low > 0 && (
-                        <em className="c-low">{h.summary.low} low</em>
-                      )}
-                      {h.summary.total === 0 && (
-                        <em className="c-clean">clean</em>
-                      )}
-                    </span>
-                    {h.rerun && (
+                {history.map((h) => {
+                  const label =
+                    h.name || h.reportId.slice(0, 10).replace("_", " ");
+                  return (
+                    <li key={h.reportId}>
                       <button
-                        className="history-rerun"
-                        title="Run this comparison again"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          rerunReport(h);
-                        }}
+                        className="row-select"
+                        onClick={() => openPastReport(h.reportId)}
                       >
-                        ↻
+                        <span className="history-name">{label}</span>
+                        <span className="history-date">{h.date}</span>
+                        <span className="history-counts">
+                          {h.summary.high > 0 && (
+                            <em className="c-high">{h.summary.high} high</em>
+                          )}
+                          {h.summary.medium > 0 && (
+                            <em className="c-medium">{h.summary.medium} med</em>
+                          )}
+                          {h.summary.low > 0 && (
+                            <em className="c-low">{h.summary.low} low</em>
+                          )}
+                          {h.summary.total === 0 && (
+                            <em className="c-clean">clean</em>
+                          )}
+                        </span>
                       </button>
-                    )}
-                  </li>
-                ))}
+                      {h.rerun && (
+                        <button
+                          className="history-rerun"
+                          aria-label={`Run the ${label} comparison again`}
+                          onClick={() => rerunReport(h)}
+                        >
+                          ↻
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}
@@ -736,9 +765,15 @@ export function App() {
             <section className="card">
               <h2>Check the captures before comparing</h2>
               {preview.warning && (
-                <div className="warning-box">{preview.warning}</div>
+                <div className="warning-box" role="status">
+                  {preview.warning}
+                </div>
               )}
-              {previewError && <div className="error-box">{previewError}</div>}
+              {previewError && (
+                <div className="error-box" role="alert">
+                  {previewError}
+                </div>
+              )}
               <div className="preview-grid">
                 <div className="preview-col">
                   <div className="preview-label">
@@ -820,16 +855,23 @@ export function App() {
           {phase !== "idle" && phase !== "error" && (
             <section className={`card progress-card${busy ? " busy" : ""}`}>
               <h2>{busy ? "Working…" : "Progress"}</h2>
-              {busy && <div className="workbar" />}
-              <ul className="progress">
+              {busy && <div className="workbar" aria-hidden="true" />}
+              <ul className="progress" aria-live="polite">
                 {visibleSteps.map((id) => {
                   const state = steps[id] ?? "pending";
                   return (
                     <li key={id} className={state}>
-                      <span className="icon">
+                      <span className="icon" aria-hidden="true">
                         {state === "done" ? "✓" : state === "fail" ? "✕" : "•"}
                       </span>
                       <span>{STEP_LABELS[id]}</span>
+                      <span className="sr-only">
+                        {state === "active"
+                          ? " — in progress"
+                          : state === "fail"
+                            ? " — failed"
+                            : ` — ${state}`}
+                      </span>
                       {stepMsgs[id] && (
                         <span className="msg">{stepMsgs[id]}</span>
                       )}
@@ -844,7 +886,9 @@ export function App() {
             {phase === "error" && (
               <section className="card">
                 <h2>Something went wrong</h2>
-                <div className="error-box">{error}</div>
+                <div className="error-box" role="alert">
+                  {error}
+                </div>
                 <div className="actions">
                   <button className="btn" onClick={() => setPhase("idle")}>
                     Back
@@ -861,7 +905,10 @@ export function App() {
           <div className="term-drawer">
             <div className="term-bar">
               <span>Terminal{termCwd ? ` · ${basename(termCwd)}` : ""}</span>
-              <button title="Close" onClick={() => setTermOpen(false)}>
+              <button
+                aria-label="Close the terminal"
+                onClick={() => setTermOpen(false)}
+              >
                 ×
               </button>
             </div>

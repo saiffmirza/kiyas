@@ -8,13 +8,16 @@
   --gold: #b8963e;
   --gold-light: #d4b667;
   --gold-muted: rgba(184, 150, 62, 0.15);
+  /* gilt dark enough to be a foreground: --gold is 2.3-2.7:1 on paper */
+  --gold-ink: #7d5f16;
+  --ink-on-gold: #111118;
   --text: #2c2c3e;
-  --text-secondary: #6b6b82;
-  --ink-faint: rgba(27, 27, 58, 0.45);
+  --text-secondary: #5c5c72;
+  --ink-faint: rgba(27, 27, 58, 0.68);
   --hairline: rgba(27, 27, 58, 0.1);
   --card-bg: rgba(255, 255, 255, 0.55);
   --red: #b91c1c;
-  --amber: #b48214;
+  --amber: #8a6410;
   --green: #166534;
   --font-display: "Iowan Old Style", "Palatino", "Book Antiqua", Georgia, serif;
   --font-ui: "Avenir Next", "Avenir", "Seravek", -apple-system, "Helvetica Neue", sans-serif;
@@ -32,9 +35,11 @@
   --gold: #c8a44e;
   --gold-light: #d4b667;
   --gold-muted: rgba(212, 182, 103, 0.16);
+  --gold-ink: #d9bb72;
+  --ink-on-gold: #111118;
   --text: #e6e0d2;
-  --text-secondary: #9d9ab0;
-  --ink-faint: rgba(240, 234, 217, 0.45);
+  --text-secondary: #a9a6bb;
+  --ink-faint: rgba(240, 234, 217, 0.66);
   --hairline: rgba(240, 234, 217, 0.12);
   --card-bg: rgba(255, 255, 255, 0.04);
   --red: #f07b7b;
@@ -54,6 +59,54 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
+}
+
+/* ---------- focus, hit area, assistive text ---------- */
+
+button:focus-visible {
+  outline: 2px solid var(--gold-ink);
+  outline-offset: 2px;
+}
+
+/* keep the visual box, meet the 24px minimum target */
+.side-add,
+.side-toggle,
+.repo-remove,
+.history-rerun,
+.theme-switch button,
+.update-dismiss,
+.term-bar button,
+.env-cta {
+  position: relative;
+}
+
+.side-add::after,
+.side-toggle::after,
+.repo-remove::after,
+.history-rerun::after,
+.theme-switch button::after,
+.update-dismiss::after,
+.term-bar button::after,
+.env-cta::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 24px);
+  height: max(100%, 24px);
+  transform: translate(-50%, -50%);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .app {
@@ -110,12 +163,12 @@ body {
 }
 
 .theme-switch button:hover {
-  color: var(--gold);
+  color: var(--gold-ink);
 }
 
 .theme-switch button.active {
   background: var(--gold-muted);
-  color: var(--gold);
+  color: var(--gold-ink);
 }
 
 .brand-mark {
@@ -155,7 +208,7 @@ body {
 .side-add:hover {
   background: var(--gold);
   border-color: var(--gold);
-  color: var(--cream-light);
+  color: var(--ink-on-gold);
 }
 
 .side-empty {
@@ -175,13 +228,27 @@ body {
 .port-list li {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
   border-radius: 8px;
   font-size: 13px;
   color: var(--text);
+  padding-right: 8px;
+}
+
+/* the row's click target: a real button filling the row */
+.row-select {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 2px 7px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
-  border-left: 2px solid transparent;
 }
 
 .repo-list li:hover,
@@ -192,7 +259,6 @@ body {
 .repo-list li.selected,
 .port-list li.selected {
   background: rgba(184, 150, 62, 0.18);
-  border-left: 3px solid var(--gold);
   color: var(--navy);
   font-weight: 600;
 }
@@ -201,13 +267,12 @@ body {
   font-weight: 600;
 }
 
-.port-list li.selected .port-num,
-.port-list li.selected .port-proc {
-  color: var(--gold);
-}
-
 .port-list li.selected .port-num {
   color: var(--navy);
+}
+
+.port-list li.selected .port-proc {
+  color: var(--text-secondary);
 }
 
 .repo-name {
@@ -226,11 +291,13 @@ body {
   font-size: 14px;
   cursor: pointer;
   padding: 0 2px;
-  visibility: hidden;
+  opacity: 0;
 }
 
-.repo-list li:hover .repo-remove {
-  visibility: visible;
+/* opacity, not visibility — a hidden element leaves the tab order */
+.repo-list li:hover .repo-remove,
+.repo-remove:focus-visible {
+  opacity: 1;
 }
 
 .repo-remove:hover {
@@ -347,8 +414,13 @@ body {
 .side-hint {
   font-size: 11px;
   line-height: 1.5;
-  color: var(--gold);
+  color: var(--gold-ink);
   padding: 6px 8px 0;
+}
+
+/* stays mounted as a live region; collapses when there is nothing to say */
+.side-hint:empty {
+  display: none;
 }
 
 .terminal-btn {
@@ -421,7 +493,7 @@ body {
 }
 
 .term-bar button:hover {
-  color: var(--gold);
+  color: var(--gold-ink);
 }
 
 .term-host {
@@ -554,12 +626,12 @@ body {
 
 .field input[type="text"]:focus,
 .grow input[type="text"]:focus {
-  border-color: var(--gold);
+  border-color: var(--gold-ink);
   box-shadow: 0 0 0 3px var(--gold-muted);
 }
 
 .field input::placeholder {
-  color: rgba(107, 107, 130, 0.65);
+  color: rgba(92, 92, 114, 0.9);
 }
 
 .row {
@@ -594,7 +666,7 @@ body {
 .btn.primary {
   background: var(--gold);
   border-color: var(--gold);
-  color: #111118;
+  color: var(--ink-on-gold);
   font-size: 14px;
   font-weight: 700;
   padding: 11px 28px;
@@ -609,8 +681,8 @@ body {
 .btn.primary:disabled {
   background: var(--gold);
   border-color: var(--gold);
-  color: #111118;
-  opacity: 0.6;
+  color: var(--ink-on-gold);
+  opacity: 0.72;
   box-shadow: none;
   cursor: not-allowed;
 }
@@ -712,8 +784,8 @@ body {
 }
 
 .steps li.current .diamond {
-  background: var(--gold);
-  border-color: var(--gold);
+  background: var(--gold-ink);
+  border-color: var(--gold-ink);
 }
 
 .steps li.done {
@@ -732,12 +804,16 @@ body {
 .history-list li {
   display: flex;
   align-items: baseline;
-  gap: 14px;
-  padding: 9px 10px;
   margin: 0 -10px;
+  padding-right: 10px;
   border-radius: 8px;
-  cursor: pointer;
   border-bottom: 1px solid var(--hairline);
+}
+
+.history-list .row-select {
+  align-items: baseline;
+  gap: 14px;
+  padding: 9px 4px 9px 10px;
 }
 
 .history-list li:last-child {
@@ -779,17 +855,18 @@ body {
   line-height: 1;
   padding: 3px 7px;
   cursor: pointer;
-  visibility: hidden;
+  opacity: 0;
 }
 
-.history-list li:hover .history-rerun {
-  visibility: visible;
+.history-list li:hover .history-rerun,
+.history-rerun:focus-visible {
+  opacity: 1;
 }
 
 .history-rerun:hover {
   border-color: var(--gold);
   background: var(--gold-muted);
-  color: var(--gold);
+  color: var(--gold-ink);
 }
 
 .history-counts em,
@@ -851,7 +928,7 @@ body {
 
 .progress li.active .icon {
   background: var(--gold-muted);
-  color: var(--gold);
+  color: var(--gold-ink);
   animation: pulse 1.2s ease-in-out infinite;
 }
 
@@ -1017,8 +1094,9 @@ body {
 }
 
 .warning-box {
-  background: rgba(180, 130, 20, 0.09);
-  border: 1px solid rgba(180, 130, 20, 0.25);
+  /* mixed from the token so the wash cannot drift from the text */
+  background: color-mix(in srgb, var(--amber) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 25%, transparent);
   color: var(--amber);
   border-radius: 10px;
   padding: 12px 14px;
@@ -1051,7 +1129,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-ink);
   margin-bottom: 8px;
 }
 
@@ -1093,7 +1171,7 @@ body {
 }
 
 [data-theme="dark"] .field input::placeholder {
-  color: rgba(157, 154, 176, 0.7);
+  color: rgba(169, 166, 187, 0.9);
 }
 
 [data-theme="dark"] .btn:not(.primary) {
@@ -1134,8 +1212,8 @@ body {
 }
 
 [data-theme="dark"] .warning-box {
-  background: rgba(217, 168, 60, 0.12);
-  border-color: rgba(217, 168, 60, 0.3);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  border-color: color-mix(in srgb, var(--amber) 30%, transparent);
 }
 
 [data-theme="dark"] .error-box {
@@ -1183,7 +1261,7 @@ body {
   background: none;
   cursor: pointer;
   color: inherit;
-  opacity: 0.55;
+  opacity: 0.85;
   font-size: 13px;
   padding: 4px 6px;
 }
@@ -1195,4 +1273,23 @@ body {
 [data-theme="dark"] .update-banner {
   border-color: rgba(212, 182, 103, 0.35);
   background: rgba(212, 182, 103, 0.1);
+}
+
+/* ---------- reduced motion ---------- */
+/* rise is opt-in above; these two loop indefinitely and need an opt-out */
+
+@media (prefers-reduced-motion: reduce) {
+  .progress li.active .icon {
+    animation: none;
+  }
+
+  .workbar::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+
+  .caret {
+    transition: none;
+  }
 }
