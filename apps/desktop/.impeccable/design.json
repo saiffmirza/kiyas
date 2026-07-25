@@ -1,0 +1,510 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-25T00:00:00.000Z",
+  "title": "Design System: Kiyas Desktop",
+  "extensions": {
+    "colorMeta": {
+      "cream": {
+        "role": "neutral",
+        "displayName": "Parchment",
+        "canonical": "#f6f0e6",
+        "dark": "#101528",
+        "purpose": "The page. Also the Electron window's own backgroundColor, so the first painted frame is already the right stock.",
+        "tonalRamp": [
+          "oklch(0.15 0.014 85)",
+          "oklch(0.26 0.014 85)",
+          "oklch(0.37 0.014 85)",
+          "oklch(0.48 0.014 85)",
+          "oklch(0.60 0.014 85)",
+          "oklch(0.71 0.014 85)",
+          "oklch(0.83 0.014 85)",
+          "oklch(0.96 0.014 85)"
+        ]
+      },
+      "parchment": {
+        "role": "neutral",
+        "displayName": "Parchment Panel",
+        "canonical": "#efe8d9",
+        "dark": "#131a31",
+        "purpose": "One step deeper than the page. The sidebar's tinted panel — the only structural surface tone in the system.",
+        "tonalRamp": [
+          "oklch(0.15 0.020 88)",
+          "oklch(0.26 0.020 88)",
+          "oklch(0.37 0.020 88)",
+          "oklch(0.48 0.020 88)",
+          "oklch(0.60 0.020 88)",
+          "oklch(0.71 0.020 88)",
+          "oklch(0.83 0.020 88)",
+          "oklch(0.93 0.020 88)"
+        ]
+      },
+      "cream-light": {
+        "role": "neutral",
+        "displayName": "Parchment Light",
+        "canonical": "#faf6ee",
+        "dark": "#1a2140",
+        "purpose": "The terminal drawer's ground, and the ink color of text sitting on navy fills."
+      },
+      "cream-dark": {
+        "role": "neutral",
+        "displayName": "Parchment Deep",
+        "canonical": "#e5ddd0",
+        "dark": "#273052",
+        "purpose": "The darkest paper step; carries the active tab in dark theme."
+      },
+      "navy": {
+        "role": "neutral",
+        "displayName": "Navy Ink",
+        "canonical": "#1b1b3a",
+        "dark": "#efe8d8",
+        "purpose": "The ink. Headings, selected labels, mono numerals, emphasis, and the small dark pill CTAs.",
+        "tonalRamp": [
+          "oklch(0.15 0.060 280)",
+          "oklch(0.26 0.060 280)",
+          "oklch(0.37 0.060 280)",
+          "oklch(0.48 0.060 280)",
+          "oklch(0.60 0.060 280)",
+          "oklch(0.71 0.060 280)",
+          "oklch(0.83 0.060 280)",
+          "oklch(0.95 0.060 280)"
+        ]
+      },
+      "navy-light": {
+        "role": "neutral",
+        "displayName": "Navy Ink Light",
+        "canonical": "#2d2d52",
+        "dark": "#ddd4c0",
+        "purpose": "The hover state of navy fills."
+      },
+      "gold": {
+        "role": "primary",
+        "displayName": "Gilt",
+        "canonical": "#b8963e",
+        "dark": "#c8a44e",
+        "purpose": "The only accent, and a fill colour only. Primary action fill, terminal cursor, drawer rule, transient hover edges. At 2.3-2.7:1 on paper it cannot carry text or a state boundary — see gold-ink. Its scarcity is the point.",
+        "tonalRamp": [
+          "oklch(0.15 0.100 90)",
+          "oklch(0.26 0.100 90)",
+          "oklch(0.37 0.100 90)",
+          "oklch(0.48 0.100 90)",
+          "oklch(0.60 0.100 90)",
+          "oklch(0.71 0.100 90)",
+          "oklch(0.83 0.100 90)",
+          "oklch(0.95 0.100 90)"
+        ]
+      },
+      "gold-ink": {
+        "role": "primary",
+        "displayName": "Gilt Ink",
+        "canonical": "#7d5f16",
+        "dark": "#d9bb72",
+        "purpose": "Gilt dark enough to be a foreground (4.9-5.6:1 on every paper tone). Capture labels, setup hint, active step glyph, current diamond, selected row edge, focus ring, focused input border. Reads as antique brass; that is the price of legibility.",
+        "tonalRamp": [
+          "oklch(0.15 0.085 88)",
+          "oklch(0.26 0.085 88)",
+          "oklch(0.37 0.085 88)",
+          "oklch(0.48 0.085 88)",
+          "oklch(0.60 0.085 88)",
+          "oklch(0.71 0.085 88)",
+          "oklch(0.83 0.085 88)",
+          "oklch(0.95 0.085 88)"
+        ]
+      },
+      "ink-on-gold": {
+        "role": "neutral",
+        "displayName": "Ink on Gilt",
+        "canonical": "#111118",
+        "dark": "#111118",
+        "purpose": "Near-black for text on a gilt fill — darker than Navy Ink, because gilt needs more than the palette's own ink to clear 4.5:1. Identical in both themes."
+      },
+      "gold-light": {
+        "role": "primary",
+        "displayName": "Gilt Light",
+        "canonical": "#d4b667",
+        "dark": "#d4b667",
+        "purpose": "Hover and pressed state of gilt fills; the dark-theme value where full gilt would be too heavy."
+      },
+      "gold-muted": {
+        "role": "primary",
+        "displayName": "Gilt Wash",
+        "canonical": "rgba(184, 150, 62, 0.15)",
+        "dark": "rgba(212, 182, 103, 0.16)",
+        "purpose": "15% tint for gilt-adjacent surfaces: focus rings, secondary-button hover, active step medallions, working-bar track. Never a resting fill."
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Body Ink",
+        "canonical": "#2c2c3e",
+        "dark": "#e6e0d2",
+        "purpose": "Running text. Softer and warmer than Navy Ink, which is reserved for emphasis.",
+        "tonalRamp": [
+          "oklch(0.15 0.030 285)",
+          "oklch(0.26 0.030 285)",
+          "oklch(0.37 0.030 285)",
+          "oklch(0.48 0.030 285)",
+          "oklch(0.60 0.030 285)",
+          "oklch(0.71 0.030 285)",
+          "oklch(0.83 0.030 285)",
+          "oklch(0.95 0.030 285)"
+        ]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#5c5c72",
+        "dark": "#a9a6bb",
+        "purpose": "Secondary and supporting text: hints, process names, timestamps, inactive rows, unreached steps. Set dark enough to clear 4.5:1 on Parchment Panel, the darkest surface it sits on."
+      },
+      "ink-faint": {
+        "role": "neutral",
+        "displayName": "Faint Ink",
+        "canonical": "rgba(27, 27, 58, 0.68)",
+        "dark": "rgba(240, 234, 217, 0.66)",
+        "purpose": "68% ink. Micro-labels, carets, dismissed affordances, completed steps, the unfilled diamond's stroke. The quietest value the 4.5:1 floor permits at 10px."
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "rgba(27, 27, 58, 0.1)",
+        "dark": "rgba(240, 234, 217, 0.12)",
+        "purpose": "10% ink. Every border in the system, and the system's substitute for elevation."
+      },
+      "card-bg": {
+        "role": "neutral",
+        "displayName": "Card Stock",
+        "canonical": "rgba(255, 255, 255, 0.55)",
+        "dark": "rgba(255, 255, 255, 0.04)",
+        "purpose": "Translucency that makes a card read as a second sheet laid on the page rather than a box drawn on it."
+      },
+      "red": {
+        "role": "tertiary",
+        "displayName": "Severity High",
+        "canonical": "#b91c1c",
+        "dark": "#f07b7b",
+        "purpose": "High-severity discrepancy counts, error notices, destructive hover. Semantic only.",
+        "tonalRamp": [
+          "oklch(0.15 0.200 28)",
+          "oklch(0.26 0.200 28)",
+          "oklch(0.37 0.200 28)",
+          "oklch(0.48 0.200 28)",
+          "oklch(0.60 0.200 28)",
+          "oklch(0.71 0.200 28)",
+          "oklch(0.83 0.200 28)",
+          "oklch(0.95 0.200 28)"
+        ]
+      },
+      "amber": {
+        "role": "tertiary",
+        "displayName": "Severity Medium",
+        "canonical": "#8a6410",
+        "dark": "#d9a83c",
+        "purpose": "Medium-severity counts and capture mismatch warnings. Semantic only. Darkened from #b48214 so the middle severity is no longer the least legible of the three.",
+        "tonalRamp": [
+          "oklch(0.15 0.130 75)",
+          "oklch(0.26 0.130 75)",
+          "oklch(0.37 0.130 75)",
+          "oklch(0.48 0.130 75)",
+          "oklch(0.60 0.130 75)",
+          "oklch(0.71 0.130 75)",
+          "oklch(0.83 0.130 75)",
+          "oklch(0.95 0.130 75)"
+        ]
+      },
+      "green": {
+        "role": "tertiary",
+        "displayName": "Severity Low / Ready",
+        "canonical": "#166534",
+        "dark": "#57b884",
+        "purpose": "Low-severity counts, the clean verdict, the running-dev-server dot, Connected/Installed tags.",
+        "tonalRamp": [
+          "oklch(0.15 0.110 150)",
+          "oklch(0.26 0.110 150)",
+          "oklch(0.37 0.110 150)",
+          "oklch(0.48 0.110 150)",
+          "oklch(0.60 0.110 150)",
+          "oklch(0.71 0.110 150)",
+          "oklch(0.83 0.110 150)",
+          "oklch(0.95 0.110 150)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Counted results only — the discrepancy total in a verdict. A number in the display serif means: this is the finding."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Card and result titles. One per card."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Flat section headings outside cards — 'How it works', 'Recent comparisons'."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All running text, inputs, list rows, buttons. Constrained to a 720px column."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase letterspaced micro-label — the system's organizing device for panels, sections, capture labels, and status tags. Letterspacing scales inversely with size."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Anything measured or addressed: ports, URLs, timestamps, paths, selectors. Never prose."
+      }
+    },
+    "shadows": [
+      {
+        "name": "gilt-lift",
+        "value": "0 2px 8px rgba(184, 150, 62, 0.35)",
+        "purpose": "Resting shadow on the gilt primary button — the only resting shadow in the system. Provisional, not doctrine."
+      },
+      {
+        "name": "gilt-lift-hover",
+        "value": "0 3px 12px rgba(184, 150, 62, 0.45)",
+        "purpose": "Primary button hover."
+      },
+      {
+        "name": "tab-seat",
+        "value": "0 1px 2px rgba(27, 27, 58, 0.12)",
+        "purpose": "Seats the active tab in its track. Dropped entirely in dark theme."
+      },
+      {
+        "name": "working-bloom",
+        "value": "0 6px 24px rgba(27, 27, 58, 0.08)",
+        "purpose": "Lifts the progress card only while a comparison is genuinely running. Dark theme uses 0 6px 24px rgba(0, 0, 0, 0.35)."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 3px rgba(184, 150, 62, 0.15)",
+        "purpose": "The input focus indicator, paired with a gilt border. outline: none is set, so this ring is the only focus signal."
+      }
+    ],
+    "motion": [
+      {
+        "name": "rise",
+        "value": "0.45s cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Main column children rise 10px into place, staggered 60ms apart for the first four. Gated behind prefers-reduced-motion."
+      },
+      {
+        "name": "ease-state",
+        "value": "0.18s ease-out",
+        "purpose": "Small state transitions, e.g. the Connections caret rotating 90°."
+      },
+      {
+        "name": "pulse",
+        "value": "1.2s ease-in-out infinite",
+        "purpose": "The active step medallion breathing between full and 35% opacity. Means: work is happening."
+      },
+      {
+        "name": "sweep",
+        "value": "1.3s ease-in-out infinite",
+        "purpose": "The working bar's 40% gradient traveling across its track. Indeterminate by design — the AI comparison has no knowable duration."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "window-min",
+        "value": "900px",
+        "purpose": "The Electron window's minWidth. There are no CSS breakpoints — layouts flex across 900–1280px+ rather than rearranging."
+      },
+      {
+        "name": "window-default",
+        "value": "1280px",
+        "purpose": "Default window width (1280×860). minHeight is 640px."
+      },
+      {
+        "name": "measure",
+        "value": "720px",
+        "purpose": "The main column's reading measure, widening to 1060px only when a report is displayed."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one loud element on a screen. Gilt fill with near-black ink; exactly one per screen.",
+      "html": "<button class=\"ds-btn-primary\">Compare</button>",
+      "css": ".ds-btn-primary { font-family: var(--font-ui, 'Avenir Next', Avenir, Seravek, -apple-system, sans-serif); font-size: 14px; font-weight: 700; padding: 11px 28px; border-radius: 9px; border: 1px solid var(--gold, #b8963e); background: var(--gold, #b8963e); color: var(--ink-on-gold, #111118); cursor: pointer; white-space: nowrap; box-shadow: 0 2px 8px rgba(184, 150, 62, 0.35); transition: background 0.18s ease-out, box-shadow 0.18s ease-out; } .ds-btn-primary:hover { background: var(--gold-light, #d4b667); box-shadow: 0 3px 12px rgba(184, 150, 62, 0.45); } .ds-btn-primary:focus-visible { outline: 2px solid var(--gold-ink, #7d5f16); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.72; box-shadow: none; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "The default button. Translucent white over parchment with a hairline border; the accent arrives at the edge on hover before it arrives in the fill.",
+      "html": "<button class=\"ds-btn-secondary\">Open in browser</button>",
+      "css": ".ds-btn-secondary { font-family: var(--font-ui, 'Avenir Next', Avenir, Seravek, -apple-system, sans-serif); font-size: 13px; font-weight: 600; padding: 9px 16px; border-radius: 9px; border: 1px solid var(--hairline, rgba(27, 27, 58, 0.1)); background: rgba(255, 255, 255, 0.7); color: var(--navy, #1b1b3a); cursor: pointer; white-space: nowrap; transition: border-color 0.18s ease-out, background 0.18s ease-out; } .ds-btn-secondary:hover { border-color: var(--gold, #b8963e); background: var(--gold-muted, rgba(184, 150, 62, 0.15)); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--gold-ink, #7d5f16); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Field with a label that carries its optional-hint inline. Focus is a gilt border plus a 3px gilt-wash ring — the only focus indicator, since outline is suppressed.",
+      "html": "<div class=\"ds-field\"><label for=\"ds-input-demo\">Which component? <span class=\"ds-hint\">optional — AI finds it in the code</span></label><input id=\"ds-input-demo\" class=\"ds-input\" type=\"text\" placeholder=\"e.g. &quot;the event header on the redemption screen&quot;\"></div>",
+      "css": ".ds-field { margin-bottom: 16px; } .ds-field label { display: block; font-family: var(--font-ui, 'Avenir Next', Avenir, Seravek, -apple-system, sans-serif); font-size: 12px; font-weight: 600; color: var(--navy, #1b1b3a); margin-bottom: 6px; } .ds-hint { font-weight: 400; color: var(--text-secondary, #6b6b82); } .ds-input { width: 100%; padding: 11px 13px; font-size: 14px; font-family: var(--font-ui, 'Avenir Next', Avenir, Seravek, -apple-system, sans-serif); border: 1px solid var(--hairline, rgba(27, 27, 58, 0.1)); border-radius: 9px; background: rgba(255, 255, 255, 0.75); color: var(--text, #2c2c3e); outline: none; } .ds-input::placeholder { color: rgba(92, 92, 114, 0.9); } .ds-input:focus { border-color: var(--gold-ink, #7d5f16); box-shadow: 0 0 0 3px var(--gold-muted, rgba(184, 150, 62, 0.15)); }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "The sidebar row. The click target is a real button filling the row; the li is only the visual container. Selection carries four signals and no border — gilt wash, navy ink, 600 weight, aria-current. The remove affordance fades in on hover but stays in the tab order.",
+      "html": "<ul class=\"ds-nav\"><li class=\"ds-nav-item ds-selected\"><button class=\"ds-row-select\" aria-current=\"true\"><span class=\"ds-nav-name\">kiyas</span></button><button class=\"ds-nav-remove\" aria-label=\"Remove kiyas from the list\">×</button></li><li class=\"ds-nav-item\"><button class=\"ds-row-select\"><span class=\"ds-nav-name\">design-system</span></button><button class=\"ds-nav-remove\" aria-label=\"Remove design-system from the list\">×</button></li></ul>",
+      "css": ".ds-nav { list-style: none; margin: 0; padding: 0; } .ds-nav-item { display: flex; align-items: center; border-radius: 8px; padding-right: 8px; font-family: var(--font-ui, 'Avenir Next', Avenir, Seravek, -apple-system, sans-serif); font-size: 13px; color: var(--text, #2c2c3e); } .ds-row-select { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 7px 2px 7px 12px; border: none; border-radius: 8px; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; } .ds-row-select:focus-visible, .ds-nav-remove:focus-visible { outline: 2px solid var(--gold-ink, #7d5f16); outline-offset: 2px; } .ds-nav-item:hover { background: rgba(27, 27, 58, 0.05); } .ds-nav-item.ds-selected { background: rgba(184, 150, 62, 0.18); color: var(--navy, #1b1b3a); font-weight: 600; } .ds-nav-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; } .ds-nav-item.ds-selected .ds-nav-name { font-weight: 600; } .ds-nav-remove { position: relative; font-family: inherit; border: none; background: none; color: var(--ink-faint, rgba(27, 27, 58, 0.68)); font-size: 14px; cursor: pointer; padding: 0 2px; opacity: 0; } .ds-nav-remove::after { content: ''; position: absolute; top: 50%; left: 50%; width: max(100%, 24px); height: max(100%, 24px); transform: translate(-50%, -50%); } .ds-nav-item:hover .ds-nav-remove, .ds-nav-remove:focus-visible { opacity: 1; } .ds-nav-remove:hover { color: var(--red, #b91c1c); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "A second sheet laid on the page: 55% white over parchment, hairline border, 14px corners, no shadow at rest. Headline in the display serif, ambient state as context chips on the same baseline.",
+      "html": "<section class=\"ds-card\"><div class=\"ds-card-head\"><h2 class=\"ds-card-title\">New comparison</h2><span class=\"ds-chips\"><span class=\"ds-chip\">kiyas</span><span class=\"ds-chip ds-mono\">http://localhost:5173</span></span></div><p class=\"ds-note\">You approve the captured pair before any AI runs.</p></section>",
+      "css": ".ds-card { background: var(--card-bg, rgba(255, 255, 255, 0.55)); border: 1px solid var(--hairline, rgba(27, 27, 58, 0.1)); border-radius: 14px; padding: 26px 28px; } .ds-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; } .ds-card-title { font-family: var(--font-display, 'Iowan Old Style', Palatino, Georgia, serif); font-size: 21px; font-weight: 600; letter-spacing: 0.005em; color: var(--navy, #1b1b3a); margin: 0 0 16px; } .ds-chips { display: inline-flex; gap: 6px; min-width: 0; } .ds-chip { font-family: var(--font-ui, 'Avenir Next', Avenir, sans-serif); font-size: 11px; font-weight: 600; color: var(--text-secondary, #6b6b82); background: rgba(27, 27, 58, 0.05); border-radius: 999px; padding: 3px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-chip.ds-mono { font-family: var(--font-mono, ui-monospace, 'SF Mono', Menlo, monospace); font-weight: 500; } .ds-note { font-family: var(--font-ui, 'Avenir Next', Avenir, sans-serif); font-size: 12.5px; line-height: 1.55; color: var(--text-secondary, #6b6b82); margin: 12px 0 0; }"
+    },
+    {
+      "name": "Status Tag",
+      "kind": "chip",
+      "refersTo": "chip-status-ok",
+      "description": "The smallest type in the system (9.5px, 700, 0.06em uppercase) and the only place green appears outside severity. Paired with a dark pill CTA when the dependency isn't ready.",
+      "html": "<ul class=\"ds-env\"><li>Claude Code<span class=\"ds-tag\">Connected</span></li><li>Figma token<button class=\"ds-env-cta\">Add</button></li></ul>",
+      "css": ".ds-env { list-style: none; margin: 0; padding: 0; } .ds-env li { display: flex; align-items: center; gap: 8px; padding: 4px 8px; font-family: var(--font-ui, 'Avenir Next', Avenir, sans-serif); font-size: 12px; color: var(--text-secondary, #6b6b82); } .ds-tag { margin-left: auto; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--green, #166534); background: rgba(22, 101, 52, 0.1); padding: 2px 8px; border-radius: 999px; } .ds-env-cta { font-family: inherit; margin-left: auto; font-size: 10.5px; font-weight: 700; padding: 2px 10px; border-radius: 999px; border: none; background: var(--navy, #1b1b3a); color: var(--cream-light, #faf6ee); cursor: pointer; } .ds-env-cta:hover { background: var(--navy-light, #2d2d52); }"
+    },
+    {
+      "name": "Segmented Tabs",
+      "kind": "chip",
+      "refersTo": "tab",
+      "description": "Two-way source switch in a 6%-ink track. The active tab is near-opaque white seated with a 1px shadow; the track never uses gilt.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-active\">Figma link</button><button class=\"ds-tab\">Screenshot</button></div>",
+      "css": ".ds-tabs { display: inline-flex; background: rgba(27, 27, 58, 0.06); border-radius: 9px; padding: 3px; } .ds-tab { font-family: var(--font-ui, 'Avenir Next', Avenir, sans-serif); font-size: 12px; font-weight: 600; padding: 6px 14px; border: none; border-radius: 7px; background: transparent; color: var(--text-secondary, #6b6b82); cursor: pointer; } .ds-tab:hover { color: var(--navy, #1b1b3a); } .ds-tab.ds-active { background: rgba(255, 255, 255, 0.95); color: var(--navy, #1b1b3a); box-shadow: 0 1px 2px rgba(27, 27, 58, 0.12); }"
+    },
+    {
+      "name": "Step Ledger",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Signature component. Five plain-language steps with 22px circular medallions: pending 6% ink, active gilt wash with a 1.2s pulse, done 12% green with a check, failed 12% red with a cross. The active row grows 13.5→14.5px and 500→600 weight — the only place type size signals state.",
+      "html": "<ul class=\"ds-steps\" aria-live=\"polite\"><li class=\"ds-step ds-done\"><span class=\"ds-medallion\" aria-hidden=\"true\">✓</span><span>Exporting the design from Figma</span><span class=\"ds-sr\"> — done</span></li><li class=\"ds-step ds-active\"><span class=\"ds-medallion\" aria-hidden=\"true\">•</span><span>Comparing design vs implementation</span><span class=\"ds-sr\"> — in progress</span><span class=\"ds-step-msg\">claude · sonnet</span></li><li class=\"ds-step\"><span class=\"ds-medallion\" aria-hidden=\"true\">•</span><span>Writing the report</span><span class=\"ds-sr\"> — pending</span></li></ul>",
+      "css": ".ds-steps { list-style: none; margin: 0; padding: 0; font-family: var(--font-ui, 'Avenir Next', Avenir, sans-serif); } .ds-step { display: flex; align-items: center; gap: 12px; padding: 9px 0; font-size: 13.5px; color: var(--text-secondary, #5c5c72); } .ds-sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .ds-medallion { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; background: rgba(27, 27, 58, 0.06); color: var(--text-secondary, #5c5c72); flex-shrink: 0; } .ds-step.ds-active { color: var(--navy, #1b1b3a); font-size: 14.5px; font-weight: 600; } .ds-step.ds-active .ds-medallion { background: var(--gold-muted, rgba(184, 150, 62, 0.15)); color: var(--gold-ink, #7d5f16); animation: ds-pulse 1.2s ease-in-out infinite; } .ds-step.ds-done .ds-medallion { background: rgba(22, 101, 52, 0.12); color: var(--green, #166534); } .ds-step.ds-fail .ds-medallion { background: rgba(185, 28, 28, 0.12); color: var(--red, #b91c1c); } .ds-step-msg { font-size: 12px; color: var(--text-secondary, #5c5c72); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } @keyframes ds-pulse { 50% { opacity: 0.35; } } @media (prefers-reduced-motion: reduce) { .ds-step.ds-active .ds-medallion { animation: none; } }"
+    },
+    {
+      "name": "Working Bar",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Signature component. A 3px gilt-wash track with a 40% gradient sweep traveling across it. Indeterminate by design — the AI comparison has no knowable duration and the system refuses to fake a percentage. The only gradient in the product.",
+      "html": "<div class=\"ds-workbar\" role=\"progressbar\" aria-label=\"Comparing\"></div>",
+      "css": ".ds-workbar { height: 3px; border-radius: 2px; overflow: hidden; background: var(--gold-muted, rgba(184, 150, 62, 0.15)); position: relative; } .ds-workbar::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; background: linear-gradient(90deg, transparent, var(--gold, #b8963e), transparent); animation: ds-sweep 1.3s ease-in-out infinite; } @keyframes ds-sweep { from { transform: translateX(-100%); } to { transform: translateX(350%); } } @media (prefers-reduced-motion: reduce) { .ds-workbar::after { animation: none; width: 100%; opacity: 0.5; } }"
+    },
+    {
+      "name": "Diamond Checklist",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The system's only ornament: a 7px square rotated 45° with a 1.5px stroke. Unfilled Faint Ink when unreached, solid Gilt Ink when current, solid Faint Ink when done — three-state progress without a progress bar. Gilt Ink rather than Gilt because at 7px the fill is the only signal separating current from done. Echoes the wordmark's gold diamond.",
+      "html": "<ol class=\"ds-checklist\"><li class=\"ds-done\"><span class=\"ds-diamond\" aria-hidden=\"true\"></span>Pick your project and its running dev server in the sidebar<span class=\"ds-sr\"> — done</span></li><li class=\"ds-current\"><span class=\"ds-diamond\" aria-hidden=\"true\"></span>Paste a Figma frame link, or use a screenshot of the design<span class=\"ds-sr\"> — current</span></li><li><span class=\"ds-diamond\" aria-hidden=\"true\"></span>Compare — you approve the captured pair before any AI runs</li></ol>",
+      "css": ".ds-checklist { list-style: none; margin: 0; padding: 0; font-family: var(--font-ui, 'Avenir Next', Avenir, sans-serif); } .ds-checklist li { display: flex; align-items: baseline; gap: 12px; padding: 7px 0; font-size: 13.5px; line-height: 1.5; color: var(--text-secondary, #5c5c72); } .ds-sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .ds-diamond { width: 7px; height: 7px; transform: rotate(45deg) translateY(-1px); background: transparent; border: 1.5px solid var(--ink-faint, rgba(27, 27, 58, 0.68)); border-radius: 1.5px; flex-shrink: 0; } .ds-checklist li.ds-current { color: var(--navy, #1b1b3a); font-weight: 500; } .ds-checklist li.ds-current .ds-diamond { background: var(--gold-ink, #7d5f16); border-color: var(--gold-ink, #7d5f16); } .ds-checklist li.ds-done { color: var(--ink-faint, rgba(27, 27, 58, 0.68)); } .ds-checklist li.ds-done .ds-diamond { background: var(--ink-faint, rgba(27, 27, 58, 0.68)); border-color: var(--ink-faint, rgba(27, 27, 58, 0.68)); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Gilded Ledger",
+    "overview": "Kiyas Desktop is a measurement instrument in the form of a book. Ruled parchment pages, navy ink entries, gilt applied only at the edges that matter. The app's job is to record a comparison and mark where reality deviated from intent, and the interface behaves like the ledger that holds that record: calm, ordered, legible at a glance, and completely uninterested in competing with the artifact under examination. When a report is on screen, the report is the loudest thing on screen.\n\nThe character is precise and instrumental. This is the axis the system is being pulled along: exact alignment, mono numerals for anything countable, tight and deliberate radii, state changes that read as readings on a gauge rather than as decoration. The shipped implementation is warmer and softer than that target — 14px card corners, 26–28px padding, a 720px reading column — so treat the softness as the incumbent baseline and the instrumental precision as the direction. Where the two conflict, precision wins; but never introduce urgency, density, or noise in its name. An instrument is quiet because it is confident.\n\nGilt is the entire accent vocabulary. There is no second accent color and there is no decorative hue — red, amber, and green exist solely to carry discrepancy severity, and green additionally to mark a dependency as connected. Everything else is ink on parchment. The reason this holds up under a real workload is that the user is a design-minded developer running the same comparison many times a day: they need to find the changed number, not to be impressed.\n\nBoth themes are first-class peers. Light is navy ink on parchment; dark inverts the material so cream ink sits on an ink-blue stock. Neither is the canonical one, and neither gets designed second.",
+    "keyCharacteristics": [
+      "Navy ink on parchment, with gilt reserved for the single most important thing on screen",
+      "One accent color; semantic red/amber/green carry meaning only, never emphasis",
+      "Serif display for headings and numerals, humanist sans for UI, mono for anything measured",
+      "Flat translucent surfaces — paper laid on paper — with hairline borders instead of shadows",
+      "Uppercase letterspaced micro-labels as the organizing device for panels and sections",
+      "The diamond: a 45°-rotated square, the system's only ornament",
+      "Light and dark designed and verified together, not sequentially"
+    ],
+    "rules": [
+      {
+        "name": "The One Metal Rule",
+        "body": "Gilt is the only accent. If a screen needs a second thing to stand out, the answer is hierarchy — type, space, or ink weight — never a second hue. Audit test: count the gilt elements in a viewport; more than three and the accent has stopped meaning anything.",
+        "section": "colors"
+      },
+      {
+        "name": "The Semantics-Only Rule",
+        "body": "Red, amber, and green are readings, never emphasis. A red element must correspond to an actual high-severity finding or a genuine error; an amber one to a real warning; a green one to a verified-ready state. Never reach for them to add color, and never introduce a fourth semantic hue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Gilt-Is-Not-Ink Rule",
+        "body": "gold fills; gold-ink is read. Anything gilt-coloured that is text, an icon glyph, a focus ring, or a persistent state boundary takes gold-ink. Transient hover edges may use gold, because a companion background change carries the same signal. Audit test: color: and outline: never resolve to var(--gold).",
+        "section": "colors"
+      },
+      {
+        "name": "The Legibility Floor Rule",
+        "body": "Every text pairing clears 4.5:1, and every boundary that is the only signal for a component or its state clears 3:1 — in both themes, measured through the full translucent stack, not against the nominal page colour. A token may be made quieter only until it reaches that floor. One documented exception: the gilt primary button's fill sits at 2.5:1 against paper, which is accepted because its label carries 6.7:1 and no state depends on the fill boundary alone. Hairline borders are exempt as decorative dividers.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Ink Rule",
+        "body": "Navy Ink emphasizes, Body Ink reads. A heading, a selected row, or a numeral takes Navy; a sentence takes Body. Setting body copy in Navy makes the page shout; setting a heading in Body makes it vanish.",
+        "section": "colors"
+      },
+      {
+        "name": "The Serif-Counts Rule",
+        "body": "If it's a heading or a number the user came here to read, it's set in the display serif. If it's a control, a label, or a sentence, it's set in the sans. There is no third case.",
+        "section": "typography"
+      },
+      {
+        "name": "The Measured-Mono Rule",
+        "body": "Monospace signals this is a value the machine produced or consumes — a port, a URL, a path, a selector, a timestamp. Using it for atmosphere, code-adjacent flavor, or emphasis breaks the signal.",
+        "section": "typography"
+      },
+      {
+        "name": "The Letterspaced-Label Rule",
+        "body": "Every panel and section is introduced by an uppercase letterspaced micro-label in Faint Ink, never by a bordered header bar. Structure comes from type, not from lines. Because these labels are the smallest type in the system, they are also where the Legibility Floor binds hardest: at 10-10.5px they must clear 4.5:1 on Parchment Panel, which is what sets Faint Ink's alpha. A quieter label is not available.",
+        "section": "typography"
+      },
+      {
+        "name": "The Ellipsis Rule",
+        "body": "Any string that comes from the user's filesystem or environment — a repo path, a component selector, a process name — is single-line with text-overflow: ellipsis and min-width: 0 on its flex parent. Paths use direction: rtl so the filename survives instead of the mount point. Machine values never wrap.",
+        "section": "layout"
+      },
+      {
+        "name": "The Artifact-First Rule",
+        "body": "When a report is on screen, the chrome collapses to a single header row and the report gets the rest of the window. Nothing decorative may be added to that state.",
+        "section": "layout"
+      },
+      {
+        "name": "The Hairline Rule",
+        "body": "Every border is 1px at 10% ink. The only heavier line in the system is the 2px gilt rule above the terminal drawer. If a boundary needs more presence than a hairline, the answer is a tonal surface change, not a thicker line — and never a coloured side border, which is the most recognisable tell of generated UI.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do design and verify every component in both themes at once. They are peers. Dark is not a filter over light — it re-derives its surfaces from the wordmark's ink (#101528 family), lifts gilt to #c8a44e, and drops the tab shadow entirely. Light is the theme that historically got under-verified; check it first.",
+      "Do compute contrast through the whole translucent stack. A card is 55% white over Parchment and an input is 75% white over that, so a token's ratio against --cream tells you nothing about its ratio where it actually renders. See the Legibility Floor Rule.",
+      "Do spend gilt on exactly one target per screen, and reach for type, space, or ink weight when something else needs to stand out.",
+      "Do give every interactive row a real <button>, every icon-only control an aria-label, every toggle an aria-pressed, and every async phase an aria-live region. A control that only responds to a mouse is unfinished.",
+      "Do pair every colour-coded state with a non-colour signal — a word, a glyph, or visually hidden text. Severity counts already say high/medium/low; progress rows carry their state as sr-only text beside the glyph.",
+      "Do keep every hit target at 24x24 minimum. When the visual box must stay smaller, expand the target with a centred ::after overlay rather than resizing the control.",
+      "Do set headings and counted numbers in Iowan Old Style, controls and prose in Avenir Next, and machine values in mono. See the Serif-Counts and Measured-Mono rules.",
+      "Do introduce every panel and section with an uppercase letterspaced micro-label in Faint Ink (10.5px, 0.14em) rather than a bordered header.",
+      "Do give every empty list a Muted Ink sentence naming the next action, in the voice already shipped (\"Add the repo that renders your UI…\", \"None running. Start one in your project, e.g. npm run dev.\").",
+      "Do keep borders at hairline (1px, 10% ink), and use a tonal surface change when a boundary needs more presence.",
+      "Do put min-width: 0 and ellipsis truncation on every filesystem or environment string, with direction: rtl on paths.",
+      "Do gate entrance and looping motion behind prefers-reduced-motion.",
+      "Do keep the window's backgroundColor in src/main/index.ts in mind — it is hardcoded to Parchment #f6f0e6, so a dark-theme launch flashes light. Fix it there, not in CSS, if it's addressed."
+    ],
+    "donts": [
+      "Don't introduce a second accent color, a decorative hue, or a gradient fill. Gilt is the only metal; the working bar's sweep is the sole gradient in the system and it is a motion effect, not a surface.",
+      "Don't use red, amber, or green for emphasis. They are severity and readiness readings. No fourth semantic hue.",
+      "Don't add resting shadows. Surfaces are flat and translucent; the four existing shadows are provisional and shouldn't be extended into a general elevation habit.",
+      "Don't add an eighth interior radius. Work within 6 / 8 / 9 / 10 / 12 / 14, and prefer consolidating toward it.",
+      "Don't ship a webfont. Both stacks are system-resident on macOS by design.",
+      "Don't remove an input's gilt focus ring — outline: none is set, so that ring is the only focus indicator. And don't ship a button without one.",
+      "Don't set color: or outline: to var(--gold). Gilt fills; --gold-ink is read.",
+      "Don't mark selection, emphasis, or severity with a coloured side border on a row, card, callout, or alert. It is the most recognisable tell of generated UI, and this system has better tools: a tonal wash, Navy ink, and a weight step.",
+      "Don't hide a hover-revealed control with visibility: hidden or display: none — both remove it from the tab order, which is how the remove and re-run affordances became keyboard-unreachable. Use opacity with a :focus-visible reveal.",
+      "Don't make a token quieter than the Legibility Floor allows, in either theme. If the design wants a fainter label, the answer is less of it, not a lighter value.",
+      "Don't show a determinate progress bar or a percentage for the AI comparison. Its duration is unknowable and the system does not fake it.",
+      "Don't render the ledger metaphor literally: no paper texture, grain, torn edges, ruled lines, or drop-shadowed sheets. It is a reasoning tool, not a skin.",
+      "Don't drift toward a glowing dark developer-tool aesthetic — neon accents, glow effects, saturated-on-black chrome. Dark theme is ink-blue stock, not a terminal.",
+      "Don't drift toward the generic AI look: violet gradients, sparkle iconography, gradient text, \"AI\" chrome. Kiyas uses AI; it doesn't advertise it visually.",
+      "Don't drift toward corporate blue SaaS: stock #3B82F6, uniform card grids, Inter everywhere.",
+      "Don't add ornament beyond the diamond, and don't fill the diamond except to mark the current step.",
+      "Don't let chrome compete with a displayed report. See the Artifact-First rule."
+    ]
+  }
+}
